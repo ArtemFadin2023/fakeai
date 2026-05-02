@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>{% block title %}FakeNewsAI{% endblock %}</title>
+
+<!-- ✅ ОБЩИЕ СТИЛИ -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+<!-- ✅ СТИЛИ СТРАНИЦЫ -->
+{% block styles %}{% endblock %}
+
+</head>
+
+<body class="{% block body_class %}{% endblock %}">
+
+{% block content %}{% endblock %}
+
+<!-- ✅ ОБЩИЕ СКРИПТЫ -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<!-- ✅ СКРИПТЫ СТРАНИЦЫ -->
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

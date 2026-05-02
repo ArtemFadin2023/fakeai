@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+    <title>FakeNewsAI - Проверка фактов</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ai.css') }}">
+</head>
+<body class="ai-page">
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-logo">🤖 FakeNewsAI</div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="goProfile()" title="Профиль">
+                👤 Профиль
+            </button>
+            <button class="btn btn-secondary" onclick="goLogout()" title="Выход">
+                ⎋ Выход
+            </button>
+        </div>
+    </div>
+
+    <!-- CHAT CONTAINER -->
+    <div class="chat-container">
+        
+        <!-- MAIN CHAT AREA -->
+        <div class="chat-main">
+            
+            <!-- CHAT MESSAGES -->
+            <div class="chat" id="chat"></div>
+            
+            <!-- INPUT AREA -->
+            <div class="input-area">
+                <div class="input-container">
+                    <div id="preview"></div>
+                    <div class="input-box">
+                        <!-- ATTACH BUTTON -->
+                        <label class="attach-btn" title="Загрузить изображение">
+                            📎
+                            <input type="file" id="imageInput" accept="image/*" hidden>
+                        </label>
+                        
+                        <!-- TEXTAREA -->
+                        <textarea
+                            id="text"
+                            rows="1"
+                            placeholder="Введите запрос или вставьте новость..."
+                            autocomplete="off"
+                        ></textarea>
+                        
+                        <!-- SEND BUTTON -->
+                        <button id="sendBtn" onclick="send()" title="Отправить (Enter)">
+                            ➤
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIDEBAR -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3>💬 Чаты</h3>
+                <button class="sidebar-close" onclick="toggleSidebar()">✕</button>
+            </div>
+            <button class="new-chat-btn" onclick="createChat()">➕ Новый чат</button>
+            <div id="chatList"></div>
+        </div>
+    </div>
+
+    <!-- MODES PANEL -->
+    <div class="modes">
+        <button id="m_news" onclick="setMode('news')" title="Проверка фактов (📰)" class="active">📰</button>
+        <button id="m_smart" onclick="setMode('smart')" title="Умный анализ (🧠)">🧠</button>
+        <button id="m_chat" onclick="setMode('chat')" title="Обычный чат (🤖)">🤖</button>
+        <button class="clear-btn danger" onclick="clearChat()" title="Очистить чат">🗑️</button>
+        <button class="info" onclick="goProfile()" title="Профиль">👤</button>
+    </div>
+
+    <!-- HAMBURGER MENU -->
+    <button class="hamburger" onclick="toggleSidebar()" title="Меню">☰</button>
+
+    <!-- MAIN SCRIPT -->
+    <script>
+        // ===== STATE =====
+        let selectedImage = null;
+        let mode = 'news';
+        let currentChat = null;
+        let isLoading = false;
+
+        // ===== INITIALIZATION =====
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkUser();
+            await loadChats();
+            const savedMode = localStorage.getItem('mode') || 'news';
+            const savedChat = localStorage.getItem('chat');
+            
+            setMode(savedMode);
+            
+            if (savedChat) {
+                const chats = await fetch('/chats').then(r => r.json());
+                if (chats.includes(savedChat)) {
+                    await openChat(savedChat);
+                }
+            }
+            
+            // Auto-resize textarea
+            const textarea = document.getElementById('text');
+            textarea.addEventListener('input', () => {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+            });
+            
+            // Enter to send
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    send();
+                }
+            });
+            
+            // Glow effect on mouse move
+            document.addEventListener('mousemove', (e) => {
+                document.querySelectorAll('.message').forEach(msg => {
+                    const rect = msg.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    msg.style.setProperty('--x', x + 'px');
+                    msg.style.setProperty('--y', y + 'px');
+                });
+            });
+        });
+
+        // ===== UTILITIES =====
+        async function checkUser() {
+            try {
+                const res = await fetch('/me');
+                const data = await res.json();
+                if (!data.user) {
+                    window.location.href = '/login_page';
+                }
+            } catch (e) {
+                console.error('Error checking user:', e);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ===== MODE MANAGEMENT =====
+        function setMode(m) {
+            if (mode === m) return;
+            
+            mode = m;
+            const textarea = document.getElementById('text');
+            
+            document.querySelectorAll('.modes button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('m_' + m).classList.add('active');
+            
+            const placeholders = {
+                news: 'Вставь новость или заявление для проверки...',
+                smart: 'Задай вопрос для подробного анализа...',
+                chat: 'Напиши сообщение...'
+            };
+            
+            textarea.placeholder = placeholders[m];
+            localStorage.setItem('mode', m);
+        }
+
+        // ===== SEND MESSAGE =====
+        async function send() {
+            if (isLoading) return;
+            
+            const input = document.getElementById('text');
+            const text = input.value.trim();
+            
+            if (!text) {
+                alert('Напиши что-нибудь!');
+                return;
+            }
+            
+            // Auto-create chat
+            if (!currentChat) {
+                const res = await fetch('/new_chat', { method: 'POST' });
+                const data = await res.json();
+                currentChat = data.chat;
+                await loadChats();
+            }
+            
+            isLoading = true;
+            
+            const chat = document.getElementById('chat');
+            
+            // Add user message
+            const userWrap = document.createElement('div');
+            userWrap.className = 'message-wrap user-wrap';
+            userWrap.innerHTML = `
+                <div class="message user">${escapeHtml(text)}</div>
+                <div class="avatar">🧑</div>
+            `;
+            chat.appendChild(userWrap);
+            
+            input.value = '';
+            input.style.height = 'auto';
+            
+            // Add typing indicator
+            const typingWrap = document.createElement('div');
+            typingWrap.className = 'message-wrap';
+            typingWrap.innerHTML = `
+                <div class="avatar">🤖</div>
+                <div class="message bot typing">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            typingWrap.id = 'typing';
+            chat.appendChild(typingWrap);
+            chat.scrollTop = chat.scrollHeight;
+            
+            try {
+                const res = await fetch('/ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: text,
+                        mode: mode,
+                        chat: currentChat,
+                        image: selectedImage
+                    })
+                });
+                
+                const data = await res.json();
+                
+                // Remove typing
+                if (document.getElementById('typing')) {
+                    document.getElementById('typing').remove();
+                }
+                
+                // Add bot message
+                const botWrap = document.createElement('div');
+                botWrap.className = 'message-wrap';
+                botWrap.innerHTML = `
+                    <div class="avatar">🤖</div>
+                    <div class="message bot">${escapeHtml(data.result || '❌ Нет ответа')}</div>
+                `;
+                chat.appendChild(botWrap);
+                chat.scrollTop = chat.scrollHeight;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                if (document.getElementById('typing')) {
+                    document.getElementById('typing').remove();
+                }
+                const errorWrap = document.createElement('div');
+                errorWrap.className = 'message-wrap';
+                errorWrap.innerHTML = `
+                    <div class="avatar">🤖</div>
+                    <div class="message bot">⚠️ Ошибка сервера. Попробуй позже.</div>
+                `;
+                chat.appendChild(errorWrap);
+            }
+            
+            selectedImage = null;
+            document.getElementById('imageInput').value = '';
+            isLoading = false;
+        }
+
+        // ===== IMAGE UPLOAD =====
+        document.getElementById('imageInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            try {
+                const res = await fetch('/upload_image', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await res.json();
+                if (data.path) {
+                    selectedImage = data.path;
+                    const preview = document.getElementById('preview');
+                    preview.innerHTML = `<img src="${data.path}" class="preview-img" alt="Preview">`;
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+            }
+        });
+
+        // ===== CHAT MANAGEMENT =====
+        async function loadChats() {
+            try {
+                const res = await fetch('/chats');
+                const chats = await res.json();
+                const list = document.getElementById('chatList');
+                list.innerHTML = '';
+                
+                chats.forEach(chat => {
+                    const el = document.createElement('div');
+                    el.className = 'chat-item';
+                    if (chat === currentChat) el.classList.add('active');
+                    
+                    const name = chat
+                        .replace('pin_', '📌 ')
+                        .replace('chat_', '')
+                        .replace('.json', '');
+                    
+                    el.innerHTML = `
+                        <span>${escapeHtml(name)}</span>
+                        <span class="delete" onclick="deleteChat('${chat}', event)">✕</span>
+                    `;
+                    
+                    el.addEventListener('click', () => openChat(chat));
+                    list.appendChild(el);
+                });
+            } catch (error) {
+                console.error('Load chats error:', error);
+            }
+        }
+
+        async function openChat(chat) {
+            currentChat = chat;
+            localStorage.setItem('chat', chat);
+            
+            try {
+                const res = await fetch('/history/' + chat);
+                const messages = await res.json();
+                const chatBox = document.getElementById('chat');
+                chatBox.innerHTML = '';
+                
+                messages.forEach(msg => {
+                    chatBox.innerHTML += `
+                        <div class="message-wrap user-wrap">
+                            <div class="message user">${escapeHtml(msg.user)}</div>
+                            <div class="avatar">🧑</div>
+                        </div>
+                        <div class="message-wrap">
+                            <div class="avatar">🤖</div>
+                            <div class="message bot">${escapeHtml(msg.bot)}</div>
+                        </div>
+                    `;
+                });
+                
+                chatBox.scrollTop = chatBox.scrollHeight;
+                await loadChats();
+            } catch (error) {
+                console.error('Open chat error:', error);
+            }
+        }
+
+        async function createChat() {
+            try {
+                const res = await fetch('/new_chat', { method: 'POST' });
+                const data = await res.json();
+                await openChat(data.chat);
+            } catch (error) {
+                console.error('Create chat error:', error);
+            }
+        }
+
+        async function deleteChat(chat, event) {
+            event.stopPropagation();
+            if (!confirm('Удалить этот чат?')) return;
+            
+            try {
+                await fetch('/delete_chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat })
+                });
+                
+                if (chat === currentChat) {
+                    currentChat = null;
+                    localStorage.removeItem('chat');
+                    document.getElementById('chat').innerHTML = '';
+                }
+                
+                await loadChats();
+            } catch (error) {
+                console.error('Delete chat error:', error);
+            }
+        }
+
+        async function clearChat() {
+            if (!currentChat) return;
+            if (!confirm('Очистить этот чат?')) return;
+            
+            try {
+                await fetch('/clear_chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat: currentChat })
+                });
+                
+                document.getElementById('chat').innerHTML = '';
+            } catch (error) {
+                console.error('Clear chat error:', error);
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        // ===== NAVIGATION =====
+        function goProfile() {
+            window.location.href = '/profile';
+        }
+
+        function goLogout() {
+            if (confirm('Выйти из аккаунта?')) {
+                window.location.href = '/logout';
+            }
+        }
+    </script>
+
+</body>
+</html>

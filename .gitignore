@@ -1,0 +1,44 @@
+# ===== СЕКРЕТЫ =====
+.env
+*.env
+api.env
+
+# ===== PYTHON =====
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.py[cod]
+
+# ===== FLASK =====
+instance/
+.webassets-cache
+
+# ===== БАЗА ДАННЫХ =====
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== ДАННЫЕ ПОЛЬЗОВАТЕЛЕЙ =====
+history/
+uploads/
+
+# ===== ВИРТУАЛЬНОЕ ОКРУЖЕНИЕ =====
+venv/
+env/
+.venv/
+.env/
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini

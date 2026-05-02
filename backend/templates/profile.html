@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+    <title>Профиль - FakeNewsAI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+            min-height: 100vh;
+            color: #f1f5f9;
+            padding: 20px;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.08) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .container { max-width: 900px; margin: 40px auto; }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            background: linear-gradient(135deg, #a78bfa, #ec4899);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            background: rgba(30, 41, 59, 0.6);
+            color: #f1f5f9;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            border-color: #7c3aed;
+            background: rgba(30, 41, 59, 0.9);
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border-color: #ef4444;
+        }
+        
+        .btn-danger:hover {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+        
+        .card h2 {
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
+        
+        .user-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .info-item {
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .info-label {
+            font-size: 12px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .info-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #a78bfa;
+        }
+        
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .loading {
+            color: #94a3b8;
+            animation: blink 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>👤 Профиль</h1>
+            <button class="btn" onclick="location.href='/'">← Вернуться</button>
+        </div>
+
+        <!-- USER INFO -->
+        <div class="card">
+            <h2>Информация аккаунта</h2>
+            <div class="user-info">
+                <div class="info-item">
+                    <div class="info-label">Логин</div>
+                    <div class="info-value" id="userName">Загрузка...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Чатов создано</div>
+                    <div class="info-value" id="chatCount">...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Сообщений</div>
+                    <div class="info-value" id="messageCount">...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="card">
+            <h2>🎯 Действия</h2>
+            <div class="actions">
+                <button class="btn" onclick="clearChats()" title="Очистить все чаты">🗑️ Очистить чаты</button>
+                <button class="btn" onclick="openAdminLogin()" title="Перейти в админку">👑 Админ панель</button>
+                <button class="btn btn-danger" onclick="logout()" title="Выход">⎋ Выход</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function load() {
+            try {
+                const res = await fetch('/me');
+                const data = await res.json();
+                
+                if (!data.user) {
+                    window.location.href = '/login_page';
+                    return;
+                }
+                
+                document.getElementById('userName').textContent = data.user;
+                
+                const chatsRes = await fetch('/chats');
+                const chats = await chatsRes.json();
+                
+                let totalMessages = 0;
+                for (const chat of chats) {
+                    const histRes = await fetch('/history/' + chat);
+                    const hist = await histRes.json();
+                    totalMessages += hist.length;
+                }
+                
+                document.getElementById('chatCount').textContent = chats.length;
+                document.getElementById('messageCount').textContent = totalMessages;
+                
+            } catch (e) {
+                console.error('Error:', e);
+                document.getElementById('userName').textContent = 'Ошибка';
+            }
+        }
+
+        async function clearChats() {
+            if (!confirm('⚠️ Очистить ВСЕ чаты? Это нельзя отменить!')) return;
+            
+            try {
+                const chatsRes = await fetch('/chats');
+                const chats = await chatsRes.json();
+                
+                for (const chat of chats) {
+                    await fetch('/clear_chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ chat })
+                    });
+                }
+                
+                alert('✓ Все чаты очищены');
+                load();
+            } catch (e) {
+                alert('❌ Ошибка: ' + e.message);
+            }
+        }
+
+        function openAdminLogin() {
+            const login = prompt('Логин администратора:');
+            if (!login) return;
+            
+            const password = prompt('Пароль администратора:');
+            if (!password) return;
+            
+            fetch('/admin_login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ login, password })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.status === 'ok') {
+                    window.location.href = '/admin';
+                } else {
+                    alert('❌ Неверный логин или пароль');
+                }
+            })
+            .catch(e => alert('❌ Ошибка: ' + e.message));
+        }
+
+        function logout() {
+            if (confirm('Выйти из аккаунта?')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        load();
+    </script>
+
+</body>
+</html>

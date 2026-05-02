@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <title>Вход - FakeNewsAI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+            
+            <!-- HEADER -->
+            <div class="header">
+                <div class="logo">🔐 FakeNewsAI</div>
+                <h1 class="title" id="title">Вход</h1>
+                <p class="subtitle">Войдите в свой аккаунт</p>
+            </div>
+
+            <!-- FORM -->
+            <form class="form" onsubmit="handleSubmit(event)">
+                
+                <!-- LOGIN INPUT -->
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <span class="input-icon">👤</span>
+                        <input
+                            type="text"
+                            id="login"
+                            class="input"
+                            placeholder="Логин"
+                            autocomplete="username"
+                        >
+                    </div>
+                    <div class="input-hint" id="login-hint"></div>
+                </div>
+
+                <!-- PASSWORD INPUT -->
+                <div class="form-group">
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔑</span>
+                        <input
+                            type="password"
+                            id="password"
+                            class="input"
+                            placeholder="Пароль"
+                            autocomplete="current-password"
+                        >
+                    </div>
+                    <div class="input-hint" id="password-hint"></div>
+                </div>
+
+                <!-- FORGOT PASSWORD -->
+                <div class="forgot-section">
+                    <a class="forgot-link" onclick="showForgotModal()">Забыли пароль?</a>
+                </div>
+
+                <!-- VALIDATION -->
+                <div class="validation-container">
+                    <div class="validation-header">
+                        <span class="validation-title">✓ Проверка данных</span>
+                        <span class="validation-score" id="score">0%</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="progress"></div>
+                    </div>
+                    <div class="validation-checks">
+                        <div class="check-item" id="check-login">
+                            <div class="check-icon">✓</div>
+                            <span>Логин минимум 4 символа</span>
+                        </div>
+                        <div class="check-item" id="check-password">
+                            <div class="check-icon">✓</div>
+                            <span>Пароль минимум 6 символов</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBMIT -->
+                <button type="submit" class="button" id="btn" disabled>
+                    <span class="spinner"></span>
+                    <span class="button-text">Продолжить</span>
+                </button>
+            </form>
+
+            <!-- TOGGLE MODE -->
+            <div class="toggle-section">
+                <span class="toggle-text">
+                    Нет аккаунта?
+                    <button type="button" class="toggle-btn" onclick="toggleMode()">Зарегистрироваться</button>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- POPUP NOTIFICATION -->
+    <div class="popup" id="popup">
+        <div class="popup-content">
+            <span class="popup-icon" id="popup-icon"></span>
+            <span id="popup-text"></span>
+        </div>
+    </div>
+
+    <script>
+        // ===== STATE =====
+        let mode = 'login';
+        let isLoading = false;
+
+        const loginInput = document.getElementById('login');
+        const passwordInput = document.getElementById('password');
+        const button = document.getElementById('btn');
+        const form = document.querySelector('.form');
+        const titleEl = document.getElementById('title');
+
+        // ===== VALIDATION =====
+        function validateLogin(value) {
+            return value.length >= 4 && /^[a-zA-Z0-9_-]+$/.test(value);
+        }
+
+        function validatePassword(value) {
+            return value.length >= 6;
+        }
+
+        function updateValidation() {
+            const login = loginInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            const loginValid = validateLogin(login);
+            const passwordValid = validatePassword(password);
+
+            // Update input states
+            loginInput.classList.toggle('valid', loginValid);
+            loginInput.classList.toggle('invalid', login.length > 0 && !loginValid);
+
+            passwordInput.classList.toggle('valid', passwordValid);
+            passwordInput.classList.toggle('invalid', password.length > 0 && !passwordValid);
+
+            // Update hints
+            document.getElementById('login-hint').textContent = 
+                loginValid ? '✓ Логин подходит' :
+                login.length > 0 ? `✗ Еще ${4 - login.length} символов` :
+                '';
+
+            document.getElementById('password-hint').textContent = 
+                passwordValid ? '✓ Пароль подходит' :
+                password.length > 0 ? `✗ Еще ${6 - password.length} символов` :
+                '';
+
+            // Update checks
+            document.getElementById('check-login').classList.toggle('passed', loginValid);
+            document.getElementById('check-password').classList.toggle('passed', passwordValid);
+
+            // Update progress
+            let score = 0;
+            if (loginValid) score += 50;
+            if (passwordValid) score += 50;
+
+            document.getElementById('progress').style.width = score + '%';
+            document.getElementById('score').textContent = score + '%';
+
+            // Enable/disable button
+            button.disabled = score < 100;
+            button.style.opacity = score < 100 ? '0.5' : '1';
+        }
+
+        loginInput.addEventListener('input', updateValidation);
+        passwordInput.addEventListener('input', updateValidation);
+
+        // ===== POPUP =====
+        function showPopup(message, type = 'info') {
+            const popup = document.getElementById('popup');
+            const icon = document.getElementById('popup-icon');
+            const text = document.getElementById('popup-text');
+
+            text.textContent = message;
+            popup.classList.remove('success', 'error', 'info');
+            popup.classList.add(type);
+
+            icon.textContent = 
+                type === 'success' ? '✓' :
+                type === 'error' ? '✕' :
+                'ℹ';
+
+            popup.classList.add('show');
+            setTimeout(() => popup.classList.remove('show'), 3000);
+        }
+
+        // ===== SUBMIT =====
+        async function handleSubmit(e) {
+            e.preventDefault();
+
+            if (isLoading || button.disabled) return;
+
+            isLoading = true;
+            button.classList.add('loading');
+
+            try {
+                const login = loginInput.value.trim();
+                const password = passwordInput.value.trim();
+
+                const endpoint = mode === 'register' ? '/register' : '/login';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ login, password })
+                });
+
+                const data = await response.json();
+
+                if (mode === 'register') {
+                    if (data.status === 'ok') {
+                        showPopup('✓ Аккаунт создан! Переход...', 'success');
+                        setTimeout(() => window.location.href = '/', 1500);
+                    } else if (data.status === 'exists') {
+                        showPopup('✗ Логин уже занят', 'error');
+                    } else {
+                        showPopup(`✗ ${data.message || 'Ошибка регистрации'}`, 'error');
+                    }
+                } else {
+                    if (data.status === 'ok') {
+                        showPopup('✓ Вход успешен! Переход...', 'success');
+                        setTimeout(() => window.location.href = data.redirect || '/', 1500);
+                    } else {
+                        showPopup('✗ Неверный логин или пароль', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showPopup('✗ Ошибка сервера. Попробуй позже.', 'error');
+            } finally {
+                isLoading = false;
+                button.classList.remove('loading');
+            }
+        }
+
+        // ===== TOGGLE MODE =====
+        function toggleMode() {
+            mode = mode === 'login' ? 'register' : 'login';
+            
+            titleEl.textContent = mode === 'register' ? 'Регистрация' : 'Вход';
+            document.querySelector('.subtitle').textContent = 
+                mode === 'register' 
+                    ? 'Создайте аккаунт' 
+                    : 'Войдите в свой аккаунт';
+            
+            document.querySelector('.toggle-text').innerHTML = 
+                mode === 'register'
+                    ? 'Уже есть аккаунт? <button type="button" class="toggle-btn" onclick="toggleMode()">Войти</button>'
+                    : 'Нет аккаунта? <button type="button" class="toggle-btn" onclick="toggleMode()">Зарегистрироваться</button>';
+            
+            document.querySelector('.button-text').textContent = 
+                mode === 'register' ? 'Зарегистрироваться' : 'Войти';
+
+            // Clear form
+            loginInput.value = '';
+            passwordInput.value = '';
+            loginInput.classList.remove('valid', 'invalid');
+            passwordInput.classList.remove('valid', 'invalid');
+            document.getElementById('login-hint').textContent = '';
+            document.getElementById('password-hint').textContent = '';
+
+            updateValidation();
+        }
+
+        // ===== FORGOT PASSWORD =====
+        function showForgotModal() {
+            const login = loginInput.value.trim();
+            if (!login) {
+                showPopup('✗ Введи логин', 'error');
+                return;
+            }
+
+            showPopup('✓ Пароль отправлен на почту (если указана)', 'info');
+        }
+
+        // ===== INIT =====
+        updateValidation();
+    </script>
+
+</body>
+</html>
