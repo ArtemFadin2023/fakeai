@@ -4,129 +4,372 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
-    <title>Админ Панель - FakeNewsAI</title>
+    <title>Админ - FakeNewsAI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+    <style>
+        /* KEYS SECTION */
+        .section{margin-bottom:32px;}
+        .section-title{font-size:18px;font-weight:700;color:#a78bfa;margin-bottom:16px;
+            display:flex;align-items:center;gap:8px;}
+
+        /* KEY GENERATOR */
+        .key-gen{background:rgba(30,41,59,0.6);border:1px solid rgba(139,92,246,0.2);
+            border-radius:14px;padding:20px;margin-bottom:24px;}
+        .key-gen-title{font-size:14px;font-weight:700;color:#94a3b8;margin-bottom:14px;
+            text-transform:uppercase;letter-spacing:0.5px;}
+        .duration-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+        .dur-btn{padding:8px 16px;border-radius:999px;border:1.5px solid rgba(139,92,246,0.3);
+            background:rgba(139,92,246,0.1);color:#a78bfa;font-size:13px;font-weight:600;
+            cursor:pointer;transition:all 0.2s;}
+        .dur-btn:hover,.dur-btn.active{background:linear-gradient(135deg,#8b5cf6,#7c3aed);
+            color:white;border-color:#8b5cf6;}
+        .gen-btn{padding:10px 24px;border:none;border-radius:10px;
+            background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;
+            font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+        .gen-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(139,92,246,0.35);}
+
+        /* GENERATED KEY */
+        .generated-key{background:rgba(15,23,42,0.8);border:1.5px solid rgba(16,185,129,0.4);
+            border-radius:12px;padding:14px 16px;margin-top:14px;display:none;}
+        .generated-key.show{display:block;}
+        .key-val{font-family:monospace;font-size:18px;color:#34d399;letter-spacing:2px;
+            font-weight:700;word-break:break-all;}
+        .key-meta{font-size:12px;color:#94a3b8;margin-top:4px;}
+        .copy-btn{padding:6px 14px;border:1.5px solid rgba(16,185,129,0.4);border-radius:8px;
+            background:rgba(16,185,129,0.1);color:#34d399;font-size:12px;font-weight:600;
+            cursor:pointer;margin-top:10px;transition:all 0.2s;}
+        .copy-btn:hover{background:rgba(16,185,129,0.2);}
+
+        /* KEYS LIST */
+        .keys-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;}
+        .key-item{background:rgba(30,41,59,0.5);border:1px solid rgba(148,163,184,0.1);
+            border-radius:10px;padding:12px 14px;display:flex;align-items:center;
+            justify-content:space-between;gap:12px;flex-wrap:wrap;}
+        .key-item.used{opacity:0.5;}
+        .key-code{font-family:monospace;font-size:13px;color:#a78bfa;letter-spacing:1px;}
+        .key-info{font-size:12px;color:#94a3b8;}
+        .key-badge{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+        .key-badge.free{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);}
+        .key-badge.used{background:rgba(148,163,184,0.1);color:#94a3b8;border:1px solid rgba(148,163,184,0.2);}
+
+        /* USERS TABLE */
+        .users-grid{display:flex;flex-direction:column;gap:10px;}
+        .user-card{background:rgba(30,41,59,0.6);border:1px solid rgba(148,163,184,0.12);
+            border-radius:14px;padding:16px;transition:all 0.3s;}
+        .user-card:hover{border-color:rgba(139,92,246,0.3);}
+        .user-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+        .user-login{font-size:16px;font-weight:700;color:#a78bfa;}
+        .user-email{font-size:12px;color:#94a3b8;}
+        .sub-badge{padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;}
+        .sub-badge.active{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);}
+        .sub-badge.inactive{background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.2);}
+        .user-meta{display:flex;gap:16px;font-size:12px;color:#94a3b8;flex-wrap:wrap;margin-bottom:12px;}
+        .user-actions{display:flex;flex-wrap:wrap;gap:6px;}
+        .ua-btn{padding:6px 12px;border-radius:8px;border:1.5px solid rgba(139,92,246,0.3);
+            background:rgba(139,92,246,0.1);color:#a78bfa;font-size:12px;font-weight:600;
+            cursor:pointer;transition:all 0.2s;}
+        .ua-btn:hover{background:rgba(139,92,246,0.25);border-color:#8b5cf6;}
+        .ua-btn.danger{border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#f87171;}
+        .ua-btn.danger:hover{background:rgba(239,68,68,0.25);}
+        .ua-btn.success{border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.1);color:#34d399;}
+        .ua-btn.success:hover{background:rgba(16,185,129,0.25);}
+
+        /* SUB SELECTOR */
+        .sub-selector{display:none;margin-top:10px;padding:12px;background:rgba(15,23,42,0.8);
+            border-radius:10px;border:1px solid rgba(139,92,246,0.2);}
+        .sub-selector.open{display:block;}
+        .sub-options{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+        .sub-opt{padding:6px 14px;border-radius:999px;border:1.5px solid rgba(139,92,246,0.25);
+            background:rgba(139,92,246,0.08);color:#a78bfa;font-size:12px;font-weight:600;
+            cursor:pointer;transition:all 0.2s;}
+        .sub-opt:hover,.sub-opt.sel{background:linear-gradient(135deg,#8b5cf6,#7c3aed);
+            color:white;border-color:#8b5cf6;}
+
+        /* MODAL */
+        .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);
+            backdrop-filter:blur(8px);z-index:1000;align-items:center;justify-content:center;padding:16px;}
+        .modal.active{display:flex;}
+        .modal-box{background:#1e293b;border:1px solid rgba(139,92,246,0.2);border-radius:20px;
+            padding:24px 20px;width:100%;max-width:380px;animation:popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+        @keyframes popIn{from{opacity:0;transform:scale(0.88)}to{opacity:1;transform:scale(1)}}
+        .modal-title{font-size:16px;font-weight:700;color:#f1f5f9;margin-bottom:16px;}
+        .modal-input{width:100%;padding:10px 14px;border:1.5px solid rgba(148,163,184,0.15);
+            border-radius:10px;background:rgba(15,23,42,0.8);color:#f1f5f9;font-size:14px;
+            margin-bottom:14px;outline:none;transition:all 0.2s;}
+        .modal-input:focus{border-color:#8b5cf6;}
+        .modal-actions{display:flex;gap:8px;}
+        .btn-primary{flex:1;padding:11px;border:none;border-radius:10px;
+            background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;font-size:14px;
+            font-weight:600;cursor:pointer;}
+        .btn-cancel{padding:11px 16px;border:1.5px solid rgba(148,163,184,0.2);border-radius:10px;
+            background:transparent;color:#94a3b8;font-size:14px;font-weight:600;cursor:pointer;}
+
+        /* TOAST */
+        .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+            background:rgba(15,23,42,0.95);border:1px solid #8b5cf6;color:#f1f5f9;
+            padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;
+            z-index:9999;opacity:0;transition:all 0.3s;pointer-events:none;}
+        .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+        .toast.error{border-color:#ef4444;}
+        .toast.success{border-color:#10b981;}
+
+        /* SEARCH */
+        .search{margin-bottom:20px;}
+        .search input{width:100%;padding:11px 14px;border:1.5px solid rgba(148,163,184,0.15);
+            border-radius:10px;background:rgba(30,41,59,0.6);color:#f1f5f9;font-size:14px;outline:none;transition:all 0.2s;}
+        .search input:focus{border-color:#8b5cf6;}
+        .tabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;}
+        .tab{padding:8px 20px;border-radius:999px;border:1.5px solid rgba(139,92,246,0.25);
+            background:rgba(139,92,246,0.08);color:#94a3b8;font-size:13px;font-weight:600;
+            cursor:pointer;transition:all 0.2s;}
+        .tab.active{background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border-color:#8b5cf6;}
+    </style>
 </head>
 <body class="admin-page">
 
-    <!-- HEADER -->
     <div class="header">
         <h2>👑 Администрирование</h2>
         <button class="back-btn" onclick="location.href='/'">← Вернуться</button>
     </div>
 
-    <!-- SEARCH -->
-    <div class="search">
-        <input id="search" placeholder="Поиск по логину..." oninput="render()">
+    <!-- TABS -->
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('users')">👥 Пользователи</button>
+        <button class="tab" onclick="switchTab('keys')">🔑 Ключи</button>
     </div>
 
-    <!-- USERS LIST -->
-    <div id="list">
-        <div class="loader"></div>
+    <!-- USERS TAB -->
+    <div id="tab-users">
+        <div class="search">
+            <input id="search" placeholder="🔍 Поиск по логину или email..." oninput="renderUsers()">
+        </div>
+        <div class="users-grid" id="usersList">
+            <div class="loader"></div>
+        </div>
     </div>
 
-    <script>
-        let users = [];
+    <!-- KEYS TAB -->
+    <div id="tab-keys" style="display:none;">
+        <!-- KEY GENERATOR -->
+        <div class="key-gen">
+            <div class="key-gen-title">🔧 Генерация ключа</div>
+            <div class="duration-grid" id="durGrid">
+                <button class="dur-btn active" data-months="1" onclick="selectDur(this)">1 месяц</button>
+                <button class="dur-btn" data-months="3" onclick="selectDur(this)">3 месяца</button>
+                <button class="dur-btn" data-months="6" onclick="selectDur(this)">6 месяцев</button>
+                <button class="dur-btn" data-months="12" onclick="selectDur(this)">12 месяцев</button>
+                <button class="dur-btn" data-months="0" onclick="selectDur(this)">♾️ Бессрочно</button>
+            </div>
+            <button class="gen-btn" onclick="generateKey()">⚡ Сгенерировать ключ</button>
+            <div class="generated-key" id="genResult">
+                <div class="key-val" id="genKeyVal"></div>
+                <div class="key-meta" id="genKeyMeta"></div>
+                <button class="copy-btn" onclick="copyKey()">📋 Скопировать</button>
+            </div>
+        </div>
 
-        // ===== MOUSE GLOW EFFECT =====
-        document.addEventListener('mousemove', (e) => {
-            document.querySelectorAll('.user').forEach(card => {
-                const rect = card.getBoundingClientRect();
-                card.style.setProperty('--x', (e.clientX - rect.left) + 'px');
-                card.style.setProperty('--y', (e.clientY - rect.top) + 'px');
-            });
+        <!-- KEYS LIST -->
+        <div class="section-title">📋 Все ключи</div>
+        <div class="keys-list" id="keysList">
+            <div style="color:#94a3b8;font-size:13px;text-align:center;padding:20px;">Загрузка...</div>
+        </div>
+    </div>
+
+    <!-- MODAL: CHANGE PASSWORD -->
+    <div class="modal" id="pwModal">
+        <div class="modal-box">
+            <div class="modal-title">🔑 Сменить пароль</div>
+            <input class="modal-input" type="password" id="newPw" placeholder="Новый пароль">
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('pwModal')">Отмена</button>
+                <button class="btn-primary" onclick="confirmChangePw()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+<script>
+    let users = [], selectedMonths = 1, currentPwLogin = '';
+    const MONTHS_LABEL = {0:'Бессрочно',1:'1 мес',3:'3 мес',6:'6 мес',12:'12 мес'};
+
+    function showToast(msg,type='info'){
+        const t=document.getElementById('toast');
+        t.textContent=msg; t.className='toast show '+(type||'');
+        clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',3000);
+    }
+    function closeModal(id){
+        document.getElementById(id).classList.remove('active');
+        document.getElementById(id).querySelectorAll('input').forEach(i=>i.value='');
+    }
+
+    function switchTab(tab){
+        document.getElementById('tab-users').style.display = tab==='users'?'':'none';
+        document.getElementById('tab-keys').style.display = tab==='keys'?'':'none';
+        document.querySelectorAll('.tab').forEach((t,i)=>{
+            t.classList.toggle('active', (i===0&&tab==='users')||(i===1&&tab==='keys'));
         });
+        if(tab==='keys') loadKeys();
+    }
 
-        // ===== LOAD USERS =====
-        async function load() {
-            try {
-                const res = await fetch('/admin/users');
-                
-                if (!res.ok) {
-                    if (res.status === 403) {
-                        window.location.href = '/profile';
-                        return;
-                    }
-                    throw new Error('Failed to load users');
-                }
-                
-                users = await res.json();
-                render();
-            } catch (error) {
-                console.error('Load error:', error);
-                document.getElementById('list').innerHTML = '❌ Ошибка загрузки пользователей';
-            }
-        }
+    // ===== USERS =====
+    async function loadUsers(){
+        try{
+            const res=await fetch('/admin/users');
+            if(res.status===403){window.location.href='/profile';return;}
+            users=await res.json();
+            renderUsers();
+        }catch(e){document.getElementById('usersList').innerHTML='❌ Ошибка загрузки';}
+    }
 
-        // ===== RENDER =====
-        function render() {
-            const q = document.getElementById('search').value.toLowerCase();
-            const list = document.getElementById('list');
-
-            const filtered = users.filter(u => 
-                u.login.toLowerCase().includes(q)
-            );
-
-            if (filtered.length === 0 && q) {
-                list.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Пользователей не найдено</div></div>';
-                return;
-            }
-
-            if (filtered.length === 0) {
-                list.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Нет пользователей</div></div>';
-                return;
-            }
-
-            list.innerHTML = '';
-
-            filtered.forEach((u, i) => {
-                const div = document.createElement('div');
-                div.className = 'user';
-                div.style.animationDelay = (i * 0.05) + 's';
-
-                const lastLogin = u.last_login === 'Никогда' ? 
-                    '<span class="user-status never">🔴 Никогда</span>' :
-                    '<span class="user-status">🟢 ' + u.last_login + '</span>';
-
-                div.innerHTML = `
-                    <div class="user-field">
-                        <div class="user-field-icon">👤</div>
-                        <div class="user-field-content">
-                            <div class="user-field-label">Логин</div>
-                            <div class="login">${escapeHtml(u.login)}</div>
-                        </div>
+    function renderUsers(){
+        const q=document.getElementById('search').value.toLowerCase();
+        const list=document.getElementById('usersList');
+        const filtered=users.filter(u=>
+            u.login.toLowerCase().includes(q)||u.email.toLowerCase().includes(q));
+        if(!filtered.length){list.innerHTML='<div style="color:#94a3b8;text-align:center;padding:40px;">Нет пользователей</div>';return;}
+        list.innerHTML='';
+        filtered.forEach(u=>{
+            const div=document.createElement('div');
+            div.className='user-card';
+            const subLabel = u.sub_type==='lifetime'?'♾️ Бессрочно':
+                u.sub_active?`до ${u.sub_until}`:'Нет подписки';
+            div.innerHTML=`
+                <div class="user-top">
+                    <div>
+                        <div class="user-login">👤 ${escHtml(u.login)}</div>
+                        <div class="user-email">${escHtml(u.email)}</div>
                     </div>
-                    
-                    <div class="user-field">
-                        <div class="user-field-icon">📅</div>
-                        <div class="user-field-content">
-                            <div class="user-field-label">Дата регистрации</div>
-                            <div class="user-info">${u.created}</div>
-                        </div>
+                    <span class="sub-badge ${u.sub_active?'active':'inactive'}">
+                        ${u.sub_active?'✅ Активна':'❌ Нет'}</span>
+                </div>
+                <div class="user-meta">
+                    <span>📅 ${u.created}</span>
+                    <span>⏱️ ${u.last_login}</span>
+                    <span>💬 ${u.messages_used} сообщений</span>
+                    <span>📆 ${subLabel}</span>
+                </div>
+                <div class="user-actions">
+                    <button class="ua-btn success" onclick="toggleSubPanel('${u.login}')">⭐ Подписка</button>
+                    <button class="ua-btn" onclick="openChangePw('${u.login}')">🔑 Пароль</button>
+                    <button class="ua-btn danger" onclick="deleteUser('${u.login}')">🗑️ Удалить</button>
+                </div>
+                <div class="sub-selector" id="sub-${u.login}">
+                    <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">Выберите срок подписки:</div>
+                    <div class="sub-options">
+                        <button class="sub-opt" data-m="1" onclick="setSub('${u.login}',1)">1 мес</button>
+                        <button class="sub-opt" data-m="3" onclick="setSub('${u.login}',3)">3 мес</button>
+                        <button class="sub-opt" data-m="6" onclick="setSub('${u.login}',6)">6 мес</button>
+                        <button class="sub-opt" data-m="12" onclick="setSub('${u.login}',12)">12 мес</button>
+                        <button class="sub-opt" data-m="0" onclick="setSub('${u.login}',0)">♾️ Бессрочно</button>
+                        <button class="sub-opt" style="border-color:rgba(239,68,68,0.3);color:#f87171;" onclick="setSub('${u.login}',null)">❌ Убрать</button>
                     </div>
-                    
-                    <div class="user-field">
-                        <div class="user-field-icon">⏱️</div>
-                        <div class="user-field-content">
-                            <div class="user-field-label">Последний вход</div>
-                            ${lastLogin}
-                        </div>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function toggleSubPanel(login){
+        const el=document.getElementById('sub-'+login);
+        el.classList.toggle('open');
+    }
+
+    async function setSub(login, months){
+        try{
+            const res=await fetch('/admin/set_sub',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({login,months})});
+            const data=await res.json();
+            if(data.status==='ok'){
+                showToast('✓ Подписка обновлена','success');
+                document.getElementById('sub-'+login).classList.remove('open');
+                await loadUsers();
+            }else showToast('✗ Ошибка','error');
+        }catch(e){showToast('✗ Ошибка сервера','error');}
+    }
+
+    function openChangePw(login){
+        currentPwLogin=login;
+        document.getElementById('pwModal').classList.add('active');
+    }
+
+    async function confirmChangePw(){
+        const pw=document.getElementById('newPw').value;
+        if(!pw||pw.length<6)return showToast('Пароль минимум 6 символов','error');
+        try{
+            const res=await fetch('/admin/change_password',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({login:currentPwLogin,password:pw})});
+            const data=await res.json();
+            if(data.status==='ok'){showToast('✓ Пароль изменён','success');closeModal('pwModal');}
+            else showToast('✗ Ошибка','error');
+        }catch(e){showToast('✗ Ошибка сервера','error');}
+    }
+
+    async function deleteUser(login){
+        if(!confirm(`Удалить аккаунт "${login}"? Это нельзя отменить!`))return;
+        try{
+            const res=await fetch('/admin/delete_user',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({login})});
+            const data=await res.json();
+            if(data.status==='ok'){showToast('✓ Аккаунт удалён','success');await loadUsers();}
+            else showToast('✗ Ошибка','error');
+        }catch(e){showToast('✗ Ошибка сервера','error');}
+    }
+
+    // ===== KEYS =====
+    function selectDur(btn){
+        document.querySelectorAll('.dur-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedMonths=parseInt(btn.dataset.months);
+    }
+
+    async function generateKey(){
+        try{
+            const res=await fetch('/admin/generate_key',{method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({months:selectedMonths})});
+            const data=await res.json();
+            if(data.status==='ok'){
+                const result=document.getElementById('genResult');
+                document.getElementById('genKeyVal').textContent=data.key;
+                document.getElementById('genKeyMeta').textContent=
+                    'Срок: '+(selectedMonths===0?'Бессрочно':selectedMonths+' мес.');
+                result.classList.add('show');
+                loadKeys();
+            }
+        }catch(e){showToast('✗ Ошибка','error');}
+    }
+
+    function copyKey(){
+        const key=document.getElementById('genKeyVal').textContent;
+        navigator.clipboard.writeText(key).then(()=>showToast('✓ Скопировано','success'));
+    }
+
+    async function loadKeys(){
+        try{
+            const res=await fetch('/admin/keys');
+            const keys=await res.json();
+            const list=document.getElementById('keysList');
+            if(!keys.length){list.innerHTML='<div style="color:#94a3b8;text-align:center;padding:20px;">Нет ключей</div>';return;}
+            list.innerHTML='';
+            keys.forEach(k=>{
+                const div=document.createElement('div');
+                div.className='key-item'+(k.used_by?' used':'');
+                div.innerHTML=`
+                    <div>
+                        <div class="key-code">${k.key}</div>
+                        <div class="key-info">${MONTHS_LABEL[k.months]||k.months+' мес'} · ${k.created}</div>
+                        ${k.used_by?`<div class="key-info">Использован: ${k.used_by} · ${k.used_at}</div>`:''}
                     </div>
+                    <span class="key-badge ${k.used_by?'used':'free'}">${k.used_by?'Использован':'Свободен'}</span>
                 `;
-
                 list.appendChild(div);
             });
-        }
+        }catch(e){}
+    }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+    function escHtml(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 
-        // ===== INIT =====
-        load();
-    </script>
-
+    loadUsers();
+</script>
 </body>
 </html>

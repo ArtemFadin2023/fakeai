@@ -4,56 +4,194 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
-    <title>FakeNewsAI - Проверка фактов</title>
+    <title>FakeNewsAI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/ai.css') }}">
+    <style>
+        /* ===== RESET OVERRIDES ===== */
+        .btn{padding:9px 16px;border-radius:10px;border:1.5px solid rgba(139,92,246,0.3);
+            background:rgba(139,92,246,0.1);color:#a78bfa;font-size:13px;font-weight:600;
+            cursor:pointer;transition:all 0.25s ease;backdrop-filter:blur(10px);}
+        .btn:hover{background:rgba(139,92,246,0.25);border-color:rgba(139,92,246,0.6);color:#fff;transform:translateY(-1px);}
+        .btn-danger{border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#f87171;}
+        .btn-danger:hover{background:rgba(239,68,68,0.25);border-color:rgba(239,68,68,0.6);color:#fff;}
+
+        .hamburger{position:fixed;top:16px;left:16px;z-index:200;width:40px;height:40px;
+            border-radius:10px;border:1.5px solid rgba(139,92,246,0.3);background:rgba(139,92,246,0.1);
+            color:#a78bfa;font-size:18px;cursor:pointer;display:flex;align-items:center;
+            justify-content:center;transition:all 0.25s;backdrop-filter:blur(10px);}
+        .hamburger:hover{background:rgba(139,92,246,0.25);color:white;}
+
+        /* ===== LAYOUT ===== */
+        .chat-container{display:flex;height:100vh;overflow:hidden;}
+        .chat-main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+        .chat{padding-bottom:230px !important;}
+
+        /* ===== SIDEBAR ===== */
+        .sidebar-header{display:flex;justify-content:space-between;align-items:center;
+            margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(139,92,246,0.15);}
+        .sidebar-header h3{font-size:14px;color:#a78bfa;font-weight:700;}
+        .sidebar-close{width:30px!important;height:30px!important;padding:0!important;
+            border-radius:8px!important;background:rgba(239,68,68,0.1)!important;
+            border-color:rgba(239,68,68,0.2)!important;color:#f87171!important;
+            font-size:13px!important;margin-bottom:0!important;}
+        .new-chat-btn{width:100%;padding:10px 14px;margin-bottom:10px;
+            border:1.5px solid rgba(139,92,246,0.3);border-radius:12px;
+            background:rgba(139,92,246,0.1);color:#a78bfa;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.25s;}
+        .new-chat-btn:hover{background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;transform:translateY(-1px);}
+
+        /* DATE FILTER */
+        .date-filter{padding:8px 0;margin-bottom:6px;}
+        .date-filter select{width:100%;padding:7px 10px;border:1.5px solid rgba(139,92,246,0.2);
+            border-radius:8px;background:rgba(15,23,42,0.8);color:#94a3b8;font-size:12px;outline:none;}
+        .date-filter select:focus{border-color:#8b5cf6;}
+
+        /* CHAT ITEM */
+        .chat-item{padding:10px 12px;border-radius:10px;background:rgba(30,41,59,0.5);
+            color:#94a3b8;cursor:pointer;transition:all 0.25s;position:relative;
+            display:flex;justify-content:space-between;align-items:center;
+            border:1px solid transparent;margin-bottom:4px;}
+        .chat-item:hover{background:rgba(30,41,59,0.8);border-color:rgba(139,92,246,0.2);transform:translateX(4px);}
+        .chat-item.active{background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;border-color:#8b5cf6;}
+        .chat-item-inner{flex:1;min-width:0;}
+        .chat-item-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .chat-item-date{font-size:10px;opacity:0.7;margin-top:2px;}
+        .chat-item .delete{color:#f87171;opacity:0;font-size:14px;cursor:pointer;flex-shrink:0;
+            padding:2px 4px;transition:opacity 0.2s;z-index:1;}
+        .chat-item:hover .delete{opacity:1;}
+
+        /* DATE GROUP HEADER */
+        .date-group{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;
+            letter-spacing:0.8px;padding:8px 4px 4px;margin-top:4px;}
+
+        /* ===== MODE PILLS ===== */
+        .mode-pills{display:flex;gap:6px;max-width:1000px;margin:0 auto 8px;flex-wrap:wrap;}
+        .pill{display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:999px;
+            border:1.5px solid rgba(139,92,246,0.2);background:rgba(15,23,42,0.6);
+            color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;
+            transition:all 0.25s cubic-bezier(0.34,1.56,0.64,1);backdrop-filter:blur(10px);white-space:nowrap;}
+        .pill:hover{border-color:rgba(139,92,246,0.5);color:#c4b5fd;transform:translateY(-1px);}
+        .pill.active{background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-color:#8b5cf6;
+            color:white;box-shadow:0 6px 20px rgba(139,92,246,0.35);transform:translateY(-1px);}
+        .pill-clear{border-color:rgba(239,68,68,0.2);color:#f87171;background:rgba(239,68,68,0.05);margin-left:auto;}
+        .pill-clear:hover{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.5);color:#fca5a5;}
+
+        /* ===== INPUT AREA ===== */
+        .input-area{padding:10px 20px calc(16px + env(safe-area-inset-bottom));}
+        .input-container{max-width:1000px;margin:0 auto;}
+
+        /* ===== PHOTO PREVIEW ===== */
+        #preview{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;align-items:flex-end;}
+        .prev-item{position:relative;animation:imgIn 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+        @keyframes imgIn{from{opacity:0;transform:scale(0.7) rotate(-5deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+        .prev-item img{width:72px;height:72px;object-fit:cover;border-radius:12px;
+            border:2px solid rgba(139,92,246,0.5);box-shadow:0 6px 20px rgba(139,92,246,0.25);display:block;}
+        .prev-remove{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;
+            background:#ef4444;border:2px solid #0a0e27;color:white;font-size:11px;font-weight:700;
+            cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+        .prev-remove:hover{background:#dc2626;transform:scale(1.15);}
+        .prev-limit{font-size:11px;color:#f87171;align-self:flex-end;padding-bottom:4px;}
+
+        /* ===== ATTACH ===== */
+        .attach-wrapper{position:relative;flex-shrink:0;}
+        .attach-badge{position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;
+            background:#8b5cf6;color:white;font-size:9px;font-weight:700;
+            display:none;align-items:center;justify-content:center;border:1.5px solid #0a0e27;}
+
+        /* ===== MSG COUNTER ===== */
+        .msg-counter{position:fixed;top:20px;right:20px;z-index:150;
+            background:rgba(15,23,42,0.85);border:1.5px solid rgba(139,92,246,0.25);
+            border-radius:999px;padding:5px 14px;font-size:12px;font-weight:600;color:#94a3b8;
+            backdrop-filter:blur(10px);transition:all 0.3s;}
+        .msg-counter.warn{border-color:rgba(239,68,68,0.5);color:#f87171;}
+
+        /* ===== LIMIT POPUP ===== */
+        .limit-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);
+            backdrop-filter:blur(10px);z-index:2000;align-items:center;justify-content:center;padding:20px;}
+        .limit-overlay.show{display:flex;}
+        .limit-box{background:#1e293b;border:1.5px solid rgba(139,92,246,0.3);border-radius:24px;
+            padding:32px 28px;max-width:400px;width:100%;text-align:center;
+            animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+        @keyframes popIn{from{opacity:0;transform:scale(0.85) translateY(30px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        .limit-icon{font-size:48px;margin-bottom:12px;}
+        .limit-title{font-size:20px;font-weight:700;color:#f1f5f9;margin-bottom:8px;}
+        .limit-text{font-size:14px;color:#94a3b8;line-height:1.6;margin-bottom:20px;}
+        .limit-btn{display:block;width:100%;padding:14px;border:none;border-radius:12px;
+            background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;font-size:15px;
+            font-weight:700;cursor:pointer;text-decoration:none;margin-bottom:10px;
+            transition:all 0.25s;}
+        .limit-btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(139,92,246,0.4);}
+        .limit-close{background:transparent;border:1.5px solid rgba(148,163,184,0.2);
+            color:#94a3b8;font-size:13px;}
+        .limit-close:hover{background:rgba(255,255,255,0.05);}
+        .tg-link{color:#a78bfa;text-decoration:none;font-weight:600;}
+        .tg-link:hover{text-decoration:underline;}
+
+        /* ===== MODES PANEL HIDE OLD ===== */
+        .modes{display:none!important;}
+
+        /* ===== IMAGE IN MESSAGE ===== */
+        .msg-img{max-width:200px;max-height:200px;border-radius:12px;margin-top:8px;display:block;
+            border:1.5px solid rgba(255,255,255,0.1);cursor:pointer;transition:transform 0.2s;}
+        .msg-img:hover{transform:scale(1.03);}
+
+        /* ===== MOBILE ===== */
+        @media(max-width:600px){
+            .mode-pills{gap:5px;}
+            .pill{font-size:11px;padding:5px 10px;}
+            .input-area{padding:8px 12px calc(12px + env(safe-area-inset-bottom));}
+            .prev-item img{width:60px;height:60px;}
+            .msg-counter{top:14px;right:14px;font-size:11px;padding:4px 10px;}
+            .limit-box{padding:24px 20px;}
+        }
+    </style>
 </head>
 <body class="ai-page">
 
     <!-- HEADER -->
     <div class="header">
-        <div class="header-logo">🤖 FakeNewsAI</div>
-        <div class="header-actions">
-            <button class="btn btn-secondary" onclick="goProfile()" title="Профиль">
-                👤 Профиль
-            </button>
-            <button class="btn btn-secondary" onclick="goLogout()" title="Выход">
-                ⎋ Выход
-            </button>
+        <div style="display:flex;align-items:center;gap:40px;">
+            <div style="width:8px;"></div>
+            <div class="header-logo" style="font-size:15px;font-weight:700;color:#a78bfa;">🤖 FakeNewsAI</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button class="btn" onclick="goProfile()">👤 Профиль</button>
+            <button class="btn btn-danger" onclick="goLogout()">⎋ Выход</button>
         </div>
     </div>
 
+    <!-- MSG COUNTER -->
+    <div class="msg-counter" id="msgCounter" style="display:none;"></div>
+
     <!-- CHAT CONTAINER -->
     <div class="chat-container">
-        
-        <!-- MAIN CHAT AREA -->
         <div class="chat-main">
-            
-            <!-- CHAT MESSAGES -->
             <div class="chat" id="chat"></div>
-            
+
             <!-- INPUT AREA -->
             <div class="input-area">
                 <div class="input-container">
+                    <!-- PILLS -->
+                    <div class="mode-pills">
+                        <button class="pill active" id="m_news" onclick="setMode('news')">📰 Фактчек</button>
+                        <button class="pill" id="m_smart" onclick="setMode('smart')">🧠 Анализ</button>
+                        <button class="pill" id="m_chat" onclick="setMode('chat')">🤖 Чат</button>
+                        <button class="pill pill-clear" onclick="clearChat()">🗑️ Очистить</button>
+                    </div>
+
+                    <!-- PREVIEW -->
                     <div id="preview"></div>
+
+                    <!-- INPUT BOX -->
                     <div class="input-box">
-                        <!-- ATTACH BUTTON -->
-                        <label class="attach-btn" title="Загрузить изображение">
-                            📎
-                            <input type="file" id="imageInput" accept="image/*" hidden>
-                        </label>
-                        
-                        <!-- TEXTAREA -->
-                        <textarea
-                            id="text"
-                            rows="1"
-                            placeholder="Введите запрос или вставьте новость..."
-                            autocomplete="off"
-                        ></textarea>
-                        
-                        <!-- SEND BUTTON -->
-                        <button id="sendBtn" onclick="send()" title="Отправить (Enter)">
-                            ➤
-                        </button>
+                        <div class="attach-wrapper">
+                            <label class="attach-btn" title="Фото (макс. 3)">
+                                📎
+                                <input type="file" id="imageInput" accept="image/*" multiple hidden>
+                            </label>
+                            <div class="attach-badge" id="attachBadge"></div>
+                        </div>
+                        <textarea id="text" rows="1" placeholder="Введите запрос или вставьте новость..." autocomplete="off"></textarea>
+                        <button id="sendBtn" onclick="send()" title="Отправить (Enter)">➤</button>
                     </div>
                 </div>
             </div>
@@ -66,360 +204,383 @@
                 <button class="sidebar-close" onclick="toggleSidebar()">✕</button>
             </div>
             <button class="new-chat-btn" onclick="createChat()">➕ Новый чат</button>
+            <div class="date-filter">
+                <select id="dateFilter" onchange="renderChats()">
+                    <option value="all">📅 Все чаты</option>
+                    <option value="today">Сегодня</option>
+                    <option value="week">Эта неделя</option>
+                    <option value="month">Этот месяц</option>
+                </select>
+            </div>
             <div id="chatList"></div>
         </div>
     </div>
 
-    <!-- MODES PANEL -->
-    <div class="modes">
-        <button id="m_news" onclick="setMode('news')" title="Проверка фактов (📰)" class="active">📰</button>
-        <button id="m_smart" onclick="setMode('smart')" title="Умный анализ (🧠)">🧠</button>
-        <button id="m_chat" onclick="setMode('chat')" title="Обычный чат (🤖)">🤖</button>
-        <button class="clear-btn danger" onclick="clearChat()" title="Очистить чат">🗑️</button>
-        <button class="info" onclick="goProfile()" title="Профиль">👤</button>
+    <!-- HAMBURGER -->
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+
+    <!-- LIMIT POPUP -->
+    <div class="limit-overlay" id="limitOverlay">
+        <div class="limit-box">
+            <div class="limit-icon">🚀</div>
+            <div class="limit-title">Лимит исчерпан</div>
+            <div class="limit-text">
+                Вы использовали все <strong>20 бесплатных сообщений</strong>.<br>
+                Оформите подписку для неограниченного доступа.<br><br>
+                Для покупки: <a href="https://t.me/memoryboot" target="_blank" class="tg-link">@memoryboot</a>
+            </div>
+            <button class="limit-btn" onclick="window.open('https://t.me/memoryboot','_blank')">
+                ✈️ Написать в Telegram
+            </button>
+            <button class="limit-btn limit-close" onclick="closeLimitPopup()">Закрыть</button>
+        </div>
     </div>
 
-    <!-- HAMBURGER MENU -->
-    <button class="hamburger" onclick="toggleSidebar()" title="Меню">☰</button>
-
-    <!-- MAIN SCRIPT -->
     <script>
-        // ===== STATE =====
-        let selectedImage = null;
-        let mode = 'news';
-        let currentChat = null;
-        let isLoading = false;
+        let selectedImages = [], MAX_IMAGES = 3;
+        let mode = 'news', currentChat = null, isLoading = false;
+        let allChats = [];
+        let subActive = false;
 
-        // ===== INITIALIZATION =====
+        // ===== INIT =====
         document.addEventListener('DOMContentLoaded', async () => {
             await checkUser();
             await loadChats();
-            const savedMode = localStorage.getItem('mode') || 'news';
-            const savedChat = localStorage.getItem('chat');
-            
-            setMode(savedMode);
-            
-            if (savedChat) {
-                const chats = await fetch('/chats').then(r => r.json());
-                if (chats.includes(savedChat)) {
-                    await openChat(savedChat);
-                }
+            setMode(localStorage.getItem('mode') || 'news', true);
+            const saved = localStorage.getItem('chat');
+            if (saved) {
+                const found = allChats.find(c => c.id === saved);
+                if (found) await openChat(saved);
             }
-            
-            // Auto-resize textarea
-            const textarea = document.getElementById('text');
-            textarea.addEventListener('input', () => {
-                textarea.style.height = 'auto';
-                textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+            const ta = document.getElementById('text');
+            ta.addEventListener('input', () => {
+                ta.style.height = 'auto';
+                ta.style.height = Math.min(ta.scrollHeight, 150) + 'px';
             });
-            
-            // Enter to send
-            textarea.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    send();
-                }
-            });
-            
-            // Glow effect on mouse move
-            document.addEventListener('mousemove', (e) => {
-                document.querySelectorAll('.message').forEach(msg => {
-                    const rect = msg.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    msg.style.setProperty('--x', x + 'px');
-                    msg.style.setProperty('--y', y + 'px');
-                });
+            ta.addEventListener('keydown', e => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
             });
         });
 
-        // ===== UTILITIES =====
+        // ===== UTILS =====
         async function checkUser() {
             try {
                 const res = await fetch('/me');
                 const data = await res.json();
-                if (!data.user) {
-                    window.location.href = '/login_page';
-                }
-            } catch (e) {
-                console.error('Error checking user:', e);
-            }
+                if (!data.user) { window.location.href = '/login_page'; return; }
+                subActive = data.sub?.active || false;
+                updateCounter(data.sub);
+            } catch(e) {}
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        function updateCounter(sub) {
+            const el = document.getElementById('msgCounter');
+            if (!sub) return;
+            if (sub.active) { el.style.display = 'none'; return; }
+            const used = sub.messages_used || 0;
+            const left = Math.max(0, 20 - used);
+            el.style.display = '';
+            el.textContent = `💬 ${left}/20`;
+            el.classList.toggle('warn', left <= 5);
         }
 
-        // ===== MODE MANAGEMENT =====
-        function setMode(m) {
-            if (mode === m) return;
-            
+        function escHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+        function toBase64(file) {
+            return new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = () => res(r.result);
+                r.onerror = rej;
+                r.readAsDataURL(file);
+            });
+        }
+
+        function showToast(msg, type = 'info') {
+            let t = document.getElementById('_toast');
+            if (!t) { t = document.createElement('div'); t.id = '_toast'; t.style.cssText =
+                'position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);'+
+                'background:rgba(15,23,42,0.95);padding:10px 20px;border-radius:10px;font-size:13px;'+
+                'font-weight:600;color:#f1f5f9;z-index:9999;opacity:0;transition:all 0.3s;'+
+                'pointer-events:none;backdrop-filter:blur(20px);white-space:nowrap;';
+                document.body.appendChild(t); }
+            t.textContent = msg;
+            t.style.border = `1px solid ${type==='error'?'#ef4444':type==='success'?'#10b981':'#8b5cf6'}`;
+            t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(0)';
+            clearTimeout(t._t); t._t = setTimeout(() => {
+                t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(10px)';
+            }, 3000);
+        }
+
+        // ===== MODE =====
+        function setMode(m, force = false) {
+            if (mode === m && !force) return;
             mode = m;
-            const textarea = document.getElementById('text');
-            
-            document.querySelectorAll('.modes button').forEach(btn => btn.classList.remove('active'));
-            document.getElementById('m_' + m).classList.add('active');
-            
-            const placeholders = {
+            document.querySelectorAll('.pill[id^="m_"]').forEach(b => b.classList.remove('active'));
+            document.getElementById('m_' + m)?.classList.add('active');
+            document.getElementById('text').placeholder = {
                 news: 'Вставь новость или заявление для проверки...',
                 smart: 'Задай вопрос для подробного анализа...',
                 chat: 'Напиши сообщение...'
-            };
-            
-            textarea.placeholder = placeholders[m];
+            }[m] || '';
             localStorage.setItem('mode', m);
         }
 
-        // ===== SEND MESSAGE =====
+        // ===== IMAGES =====
+        document.getElementById('imageInput').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            const remaining = MAX_IMAGES - selectedImages.length;
+            if (remaining <= 0) { showToast('Максимум 3 фото', 'error'); return; }
+            const toAdd = files.slice(0, remaining);
+            if (files.length > remaining) showToast(`Добавлено ${toAdd.length} из ${files.length} (лимит 3)`);
+            for (const file of toAdd) {
+                const base64 = await toBase64(file);
+                const fd = new FormData(); fd.append('image', file);
+                try {
+                    const res = await fetch('/upload_image', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (data.path) selectedImages.push({ path: data.path, base64, name: file.name });
+                } catch(err) { console.error(err); }
+            }
+            e.target.value = '';
+            renderPreview();
+        });
+
+        function renderPreview() {
+            const preview = document.getElementById('preview');
+            const badge = document.getElementById('attachBadge');
+            preview.innerHTML = '';
+            if (!selectedImages.length) { badge.style.display = 'none'; return; }
+            badge.style.display = 'flex';
+            badge.textContent = selectedImages.length;
+            selectedImages.forEach((img, i) => {
+                const item = document.createElement('div');
+                item.className = 'prev-item';
+                item.innerHTML = `<img src="${img.base64}" alt="фото"><div class="prev-remove" onclick="removeImg(${i})">✕</div>`;
+                preview.appendChild(item);
+            });
+            if (selectedImages.length >= MAX_IMAGES) {
+                const lim = document.createElement('div');
+                lim.className = 'prev-limit'; lim.textContent = '⚠️ Лимит 3 фото';
+                preview.appendChild(lim);
+            }
+        }
+
+        function removeImg(i) { selectedImages.splice(i, 1); renderPreview(); }
+
+        // ===== SEND =====
         async function send() {
             if (isLoading) return;
-            
             const input = document.getElementById('text');
             const text = input.value.trim();
-            
-            if (!text) {
-                alert('Напиши что-нибудь!');
-                return;
-            }
-            
-            // Auto-create chat
+            if (!text && !selectedImages.length) return showToast('Напиши что-нибудь!');
+
             if (!currentChat) {
                 const res = await fetch('/new_chat', { method: 'POST' });
                 const data = await res.json();
                 currentChat = data.chat;
                 await loadChats();
             }
-            
+
             isLoading = true;
-            
             const chat = document.getElementById('chat');
-            
-            // Add user message
+
+            // User message
             const userWrap = document.createElement('div');
             userWrap.className = 'message-wrap user-wrap';
+            const imgsHtml = selectedImages.map(img =>
+                `<img src="${img.base64}" class="msg-img" onclick="viewImg(this)">`
+            ).join('');
             userWrap.innerHTML = `
-                <div class="message user">${escapeHtml(text)}</div>
-                <div class="avatar">🧑</div>
-            `;
+                <div class="message user">${escHtml(text)}${imgsHtml}</div>
+                <div class="avatar">🧑</div>`;
             chat.appendChild(userWrap);
-            
-            input.value = '';
-            input.style.height = 'auto';
-            
-            // Add typing indicator
-            const typingWrap = document.createElement('div');
-            typingWrap.className = 'message-wrap';
-            typingWrap.innerHTML = `
-                <div class="avatar">🤖</div>
-                <div class="message bot typing">
-                    <span></span><span></span><span></span>
-                </div>
-            `;
-            typingWrap.id = 'typing';
-            chat.appendChild(typingWrap);
+
+            const imgsCopy = [...selectedImages];
+            selectedImages = []; renderPreview();
+            input.value = ''; input.style.height = 'auto';
+
+            // Typing
+            const typing = document.createElement('div');
+            typing.className = 'message-wrap'; typing.id = 'typing';
+            typing.innerHTML = `<div class="avatar">🤖</div><div class="message bot typing"><span></span><span></span><span></span></div>`;
+            chat.appendChild(typing);
             chat.scrollTop = chat.scrollHeight;
-            
+
+            let msgText = text;
+            if (imgsCopy.length) msgText += `\n\n[Прикреплено фото: ${imgsCopy.map(i=>i.path).join(', ')}]`;
+
             try {
                 const res = await fetch('/ai', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: text,
-                        mode: mode,
-                        chat: currentChat,
-                        image: selectedImage
-                    })
+                    body: JSON.stringify({ message: msgText, mode, chat: currentChat, images: imgsCopy.map(i=>i.path) })
                 });
-                
                 const data = await res.json();
-                
-                // Remove typing
-                if (document.getElementById('typing')) {
-                    document.getElementById('typing').remove();
+                document.getElementById('typing')?.remove();
+
+                if (data.result === 'LIMIT' || data.limit_reached) {
+                    showLimitPopup(); isLoading = false; return;
                 }
-                
-                // Add bot message
+
                 const botWrap = document.createElement('div');
                 botWrap.className = 'message-wrap';
-                botWrap.innerHTML = `
-                    <div class="avatar">🤖</div>
-                    <div class="message bot">${escapeHtml(data.result || '❌ Нет ответа')}</div>
-                `;
+                botWrap.innerHTML = `<div class="avatar">🤖</div><div class="message bot">${escHtml(data.result||'❌ Нет ответа')}</div>`;
                 chat.appendChild(botWrap);
-                chat.scrollTop = chat.scrollHeight;
-                
-            } catch (error) {
-                console.error('Error:', error);
-                if (document.getElementById('typing')) {
-                    document.getElementById('typing').remove();
+
+                // Update chat title
+                if (data.chat_title) {
+                    const chatItem = document.querySelector(`.chat-item[data-id="${currentChat}"] .chat-item-title`);
+                    if (chatItem) chatItem.textContent = data.chat_title;
+                    const c = allChats.find(c => c.id === currentChat);
+                    if (c) c.title = data.chat_title;
                 }
-                const errorWrap = document.createElement('div');
-                errorWrap.className = 'message-wrap';
-                errorWrap.innerHTML = `
-                    <div class="avatar">🤖</div>
-                    <div class="message bot">⚠️ Ошибка сервера. Попробуй позже.</div>
-                `;
-                chat.appendChild(errorWrap);
+
+                // Update counter
+                if (data.messages_left !== null && data.messages_left !== undefined) {
+                    updateCounter({ active: false, messages_used: 20 - data.messages_left });
+                } else {
+                    updateCounter({ active: true });
+                }
+
+            } catch(err) {
+                document.getElementById('typing')?.remove();
+                const errWrap = document.createElement('div');
+                errWrap.className = 'message-wrap';
+                errWrap.innerHTML = `<div class="avatar">🤖</div><div class="message bot">⚠️ Ошибка сервера.</div>`;
+                chat.appendChild(errWrap);
             }
-            
-            selectedImage = null;
-            document.getElementById('imageInput').value = '';
+
+            chat.scrollTop = chat.scrollHeight;
             isLoading = false;
         }
 
-        // ===== IMAGE UPLOAD =====
-        document.getElementById('imageInput').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const formData = new FormData();
-            formData.append('image', file);
-            
-            try {
-                const res = await fetch('/upload_image', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await res.json();
-                if (data.path) {
-                    selectedImage = data.path;
-                    const preview = document.getElementById('preview');
-                    preview.innerHTML = `<img src="${data.path}" class="preview-img" alt="Preview">`;
-                }
-            } catch (error) {
-                console.error('Upload error:', error);
-            }
+        function viewImg(img) {
+            const ov = document.createElement('div');
+            ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+            ov.innerHTML = `<img src="${img.src}" style="max-width:90vw;max-height:90vh;border-radius:12px;">`;
+            ov.onclick = () => ov.remove();
+            document.body.appendChild(ov);
+        }
+
+        // ===== LIMIT POPUP =====
+        function showLimitPopup() { document.getElementById('limitOverlay').classList.add('show'); }
+        function closeLimitPopup() { document.getElementById('limitOverlay').classList.remove('show'); }
+        document.getElementById('limitOverlay').addEventListener('click', e => {
+            if (e.target === document.getElementById('limitOverlay')) closeLimitPopup();
         });
 
-        // ===== CHAT MANAGEMENT =====
+        // ===== CHATS =====
         async function loadChats() {
             try {
                 const res = await fetch('/chats');
-                const chats = await res.json();
-                const list = document.getElementById('chatList');
-                list.innerHTML = '';
-                
-                chats.forEach(chat => {
-                    const el = document.createElement('div');
-                    el.className = 'chat-item';
-                    if (chat === currentChat) el.classList.add('active');
-                    
-                    const name = chat
-                        .replace('pin_', '📌 ')
-                        .replace('chat_', '')
-                        .replace('.json', '');
-                    
-                    el.innerHTML = `
-                        <span>${escapeHtml(name)}</span>
-                        <span class="delete" onclick="deleteChat('${chat}', event)">✕</span>
-                    `;
-                    
-                    el.addEventListener('click', () => openChat(chat));
-                    list.appendChild(el);
-                });
-            } catch (error) {
-                console.error('Load chats error:', error);
-            }
+                allChats = await res.json();
+                renderChats();
+            } catch(e) { console.error(e); }
         }
 
-        async function openChat(chat) {
-            currentChat = chat;
-            localStorage.setItem('chat', chat);
-            
+        function getDateGroup(mtime) {
+            const now = new Date(), d = new Date(mtime * 1000);
+            const diff = (now - d) / 86400000;
+            if (diff < 1 && now.getDate() === d.getDate()) return 'Сегодня';
+            if (diff < 2 && (now.getDate() - d.getDate()) === 1) return 'Вчера';
+            if (diff < 7) return 'Эта неделя';
+            if (diff < 30) return 'Этот месяц';
+            return 'Ранее';
+        }
+
+        function passesFilter(chat) {
+            const f = document.getElementById('dateFilter').value;
+            if (f === 'all') return true;
+            const now = new Date(), d = new Date(chat.mtime * 1000);
+            const diff = (now - d) / 86400000;
+            if (f === 'today') return diff < 1 && now.getDate() === d.getDate();
+            if (f === 'week') return diff < 7;
+            if (f === 'month') return diff < 30;
+            return true;
+        }
+
+        function renderChats() {
+            const list = document.getElementById('chatList');
+            list.innerHTML = '';
+            const filtered = allChats.filter(passesFilter);
+            if (!filtered.length) {
+                list.innerHTML = '<div style="color:#94a3b8;font-size:13px;text-align:center;padding:20px;">Нет чатов</div>';
+                return;
+            }
+            let lastGroup = '';
+            filtered.forEach(chat => {
+                const group = getDateGroup(chat.mtime);
+                if (group !== lastGroup) {
+                    const gh = document.createElement('div');
+                    gh.className = 'date-group'; gh.textContent = group;
+                    list.appendChild(gh); lastGroup = group;
+                }
+                const el = document.createElement('div');
+                el.className = 'chat-item' + (chat.id === currentChat ? ' active' : '');
+                el.dataset.id = chat.id;
+                const title = chat.pinned ? '📌 ' : '';
+                const name = chat.title || chat.id.replace('pin_','').replace('chat_','').replace('.json','');
+                const date = chat.mtime ? new Date(chat.mtime * 1000).toLocaleDateString('ru') : '';
+                el.innerHTML = `
+                    <div class="chat-item-inner">
+                        <div class="chat-item-title">${title}${escHtml(name)}</div>
+                        <div class="chat-item-date">${date} · ${chat.message_count || 0} сообщ.</div>
+                    </div>
+                    <span class="delete" onclick="deleteChat('${chat.id}',event)">✕</span>`;
+                el.addEventListener('click', () => openChat(chat.id));
+                list.appendChild(el);
+            });
+        }
+
+        async function openChat(chatId) {
+            currentChat = chatId;
+            localStorage.setItem('chat', chatId);
             try {
-                const res = await fetch('/history/' + chat);
+                const res = await fetch('/history/' + chatId);
                 const messages = await res.json();
                 const chatBox = document.getElementById('chat');
                 chatBox.innerHTML = '';
-                
                 messages.forEach(msg => {
                     chatBox.innerHTML += `
                         <div class="message-wrap user-wrap">
-                            <div class="message user">${escapeHtml(msg.user)}</div>
+                            <div class="message user">${escHtml(msg.user)}</div>
                             <div class="avatar">🧑</div>
                         </div>
                         <div class="message-wrap">
                             <div class="avatar">🤖</div>
-                            <div class="message bot">${escapeHtml(msg.bot)}</div>
-                        </div>
-                    `;
+                            <div class="message bot">${escHtml(msg.bot)}</div>
+                        </div>`;
                 });
-                
                 chatBox.scrollTop = chatBox.scrollHeight;
-                await loadChats();
-            } catch (error) {
-                console.error('Open chat error:', error);
-            }
+                renderChats();
+            } catch(e) { console.error(e); }
         }
 
         async function createChat() {
-            try {
-                const res = await fetch('/new_chat', { method: 'POST' });
-                const data = await res.json();
-                await openChat(data.chat);
-            } catch (error) {
-                console.error('Create chat error:', error);
-            }
+            const res = await fetch('/new_chat', { method: 'POST' });
+            const data = await res.json();
+            await loadChats();
+            await openChat(data.chat);
         }
 
-        async function deleteChat(chat, event) {
-            event.stopPropagation();
-            if (!confirm('Удалить этот чат?')) return;
-            
-            try {
-                await fetch('/delete_chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat })
-                });
-                
-                if (chat === currentChat) {
-                    currentChat = null;
-                    localStorage.removeItem('chat');
-                    document.getElementById('chat').innerHTML = '';
-                }
-                
-                await loadChats();
-            } catch (error) {
-                console.error('Delete chat error:', error);
-            }
+        async function deleteChat(chatId, e) {
+            e.stopPropagation();
+            if (!confirm('Удалить чат?')) return;
+            await fetch('/delete_chat', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({chat: chatId}) });
+            if (chatId === currentChat) { currentChat = null; localStorage.removeItem('chat'); document.getElementById('chat').innerHTML = ''; }
+            await loadChats();
         }
 
         async function clearChat() {
-            if (!currentChat) return;
-            if (!confirm('Очистить этот чат?')) return;
-            
-            try {
-                await fetch('/clear_chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat: currentChat })
-                });
-                
-                document.getElementById('chat').innerHTML = '';
-            } catch (error) {
-                console.error('Clear chat error:', error);
-            }
+            if (!currentChat) return showToast('Нет активного чата');
+            if (!confirm('Очистить чат?')) return;
+            await fetch('/clear_chat', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({chat: currentChat}) });
+            document.getElementById('chat').innerHTML = '';
         }
 
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
-        }
-
-        // ===== NAVIGATION =====
-        function goProfile() {
-            window.location.href = '/profile';
-        }
-
-        function goLogout() {
-            if (confirm('Выйти из аккаунта?')) {
-                window.location.href = '/logout';
-            }
-        }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+        function goProfile() { window.location.href = '/profile'; }
+        function goLogout() { if (confirm('Выйти?')) window.location.href = '/logout'; }
     </script>
-
 </body>
 </html>

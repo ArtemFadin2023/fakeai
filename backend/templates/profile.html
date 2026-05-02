@@ -2,261 +2,396 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👤</text></svg>">
     <title>Профиль - FakeNewsAI</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
-            min-height: 100vh;
-            color: #f1f5f9;
-            padding: 20px;
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --bg:#0a0e27;--bg2:#111827;--card:rgba(30,41,59,0.6);
+            --border:rgba(148,163,184,0.12);--accent:#8b5cf6;--accent2:#7c3aed;
+            --text:#f1f5f9;--muted:#94a3b8;--success:#10b981;--danger:#ef4444;--warn:#f59e0b;
         }
-        
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 80%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.08) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: -1;
-        }
-        
-        .container { max-width: 900px; margin: 40px auto; }
-        
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 32px;
-        }
-        
-        .header h1 {
-            font-size: 32px;
-            background: linear-gradient(135deg, #a78bfa, #ec4899);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .btn {
-            padding: 10px 20px;
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 8px;
-            background: rgba(30, 41, 59, 0.6);
-            color: #f1f5f9;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .btn:hover {
-            border-color: #7c3aed;
-            background: rgba(30, 41, 59, 0.9);
-            transform: translateY(-2px);
-        }
-        
-        .btn-danger {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-            border-color: #ef4444;
-        }
-        
-        .btn-danger:hover {
-            background: #ef4444;
-            color: white;
-        }
-        
-        .card {
-            background: rgba(30, 41, 59, 0.6);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 16px;
-            padding: 32px;
-            margin-bottom: 24px;
-        }
-        
-        .card h2 {
-            font-size: 20px;
-            margin-bottom: 16px;
-        }
-        
-        .user-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-        }
-        
-        .info-item {
-            padding: 16px;
-            background: rgba(15, 23, 42, 0.8);
-            border-radius: 12px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
-        }
-        
-        .info-label {
-            font-size: 12px;
-            color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-        }
-        
-        .info-value {
-            font-size: 18px;
-            font-weight: 600;
-            color: #a78bfa;
-        }
-        
-        .actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-        }
-        
-        .btn-group {
-            display: flex;
-            gap: 12px;
-        }
-        
-        .loading {
-            color: #94a3b8;
-            animation: blink 1.5s ease-in-out infinite;
-        }
-        
-        @keyframes blink {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+            background:linear-gradient(135deg,var(--bg) 0%,var(--bg2) 100%);
+            min-height:100vh;color:var(--text);padding:16px;padding-bottom:40px;}
+        body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:-1;
+            background:radial-gradient(circle at 20% 80%,rgba(139,92,246,0.08) 0%,transparent 50%),
+                       radial-gradient(circle at 80% 20%,rgba(236,72,153,0.06) 0%,transparent 50%);}
+        .container{max-width:600px;margin:0 auto;}
+
+        /* HEADER */
+        .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+        .page-title{font-size:22px;font-weight:700;background:linear-gradient(135deg,#a78bfa,#ec4899);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+        .back-btn{padding:8px 16px;border:1.5px solid rgba(139,92,246,0.3);border-radius:10px;
+            background:rgba(139,92,246,0.1);color:#a78bfa;font-size:13px;font-weight:600;
+            cursor:pointer;transition:all 0.2s;}
+        .back-btn:hover{background:rgba(139,92,246,0.2);transform:translateX(-2px);}
+
+        /* CARD */
+        .card{background:var(--card);backdrop-filter:blur(12px);border:1px solid var(--border);
+            border-radius:16px;padding:18px;margin-bottom:14px;}
+        .card-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;
+            letter-spacing:0.8px;margin-bottom:14px;}
+
+        /* STATS */
+        .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+        .stat{background:rgba(15,23,42,0.7);border:1px solid var(--border);border-radius:12px;
+            padding:12px 8px;text-align:center;}
+        .stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
+        .stat-value{font-size:20px;font-weight:700;color:var(--accent);}
+
+        /* SUBSCRIPTION BANNER */
+        .sub-banner{border-radius:14px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden;}
+        .sub-banner.active{background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(139,92,246,0.15));
+            border:1px solid rgba(16,185,129,0.3);}
+        .sub-banner.inactive{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);}
+        .sub-status{font-size:16px;font-weight:700;margin-bottom:4px;}
+        .sub-status.active{color:var(--success);}
+        .sub-status.inactive{color:var(--danger);}
+        .sub-detail{font-size:13px;color:var(--muted);}
+        .sub-bar{height:4px;border-radius:4px;background:rgba(255,255,255,0.1);margin-top:10px;overflow:hidden;}
+        .sub-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--success),var(--accent));
+            transition:width 0.5s ease;}
+
+        /* INFO ROW */
+        .info-row{display:flex;align-items:center;justify-content:space-between;
+            padding:11px 0;border-bottom:1px solid var(--border);}
+        .info-row:last-child{border-bottom:none;}
+        .info-left{flex:1;min-width:0;}
+        .info-key{font-size:11px;color:var(--muted);margin-bottom:2px;}
+        .info-val{font-size:14px;font-weight:600;color:var(--text);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .info-val.accent{color:var(--accent);}
+        .edit-btn{padding:5px 12px;border:1.5px solid rgba(139,92,246,0.3);border-radius:8px;
+            background:rgba(139,92,246,0.1);color:#a78bfa;font-size:12px;font-weight:600;
+            cursor:pointer;transition:all 0.2s;white-space:nowrap;margin-left:10px;flex-shrink:0;}
+        .edit-btn:hover{background:rgba(139,92,246,0.25);border-color:var(--accent);}
+
+        /* KEY INPUT */
+        .key-row{display:flex;gap:8px;margin-top:14px;}
+        .key-input{flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;
+            background:rgba(15,23,42,0.8);color:var(--text);font-size:14px;font-family:monospace;
+            letter-spacing:1px;outline:none;transition:all 0.2s;}
+        .key-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(139,92,246,0.15);}
+        .key-input::placeholder{letter-spacing:0;font-family:inherit;color:var(--muted);}
+        .key-btn{padding:10px 16px;border:none;border-radius:10px;
+            background:linear-gradient(135deg,var(--accent),var(--accent2));
+            color:white;font-size:13px;font-weight:600;cursor:pointer;
+            transition:all 0.2s;white-space:nowrap;flex-shrink:0;}
+        .key-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(139,92,246,0.35);}
+
+        /* ACTIONS */
+        .actions{display:flex;flex-direction:column;gap:8px;}
+        .action-btn{width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid var(--border);
+            background:rgba(15,23,42,0.5);color:var(--text);font-size:14px;font-weight:600;
+            cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;transition:all 0.2s;}
+        .action-btn:hover{border-color:rgba(139,92,246,0.4);background:rgba(139,92,246,0.1);transform:translateX(3px);}
+        .action-btn.danger{border-color:rgba(239,68,68,0.2);color:#f87171;}
+        .action-btn.danger:hover{background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.5);}
+
+        /* MODAL */
+        .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);
+            backdrop-filter:blur(8px);z-index:1000;align-items:center;justify-content:center;padding:16px;}
+        .modal.active{display:flex;}
+        .modal-box{background:#1e293b;border:1px solid rgba(139,92,246,0.2);border-radius:20px;
+            padding:24px 20px;width:100%;max-width:400px;animation:popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);position:relative;}
+        @keyframes popIn{from{opacity:0;transform:scale(0.88) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        .modal-title{font-size:17px;font-weight:700;margin-bottom:18px;color:var(--text);}
+        .modal-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:8px;
+            border:none;background:rgba(239,68,68,0.1);color:#f87171;font-size:14px;
+            cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+        .modal-close:hover{background:rgba(239,68,68,0.25);}
+        .field{margin-bottom:12px;}
+        .field label{display:block;font-size:11px;color:var(--muted);font-weight:600;
+            text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+        .field input{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;
+            background:rgba(15,23,42,0.8);color:var(--text);font-size:14px;transition:all 0.2s;outline:none;}
+        .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(139,92,246,0.15);}
+        .modal-actions{display:flex;gap:8px;margin-top:18px;}
+        .btn-primary{flex:1;padding:11px;border:none;border-radius:10px;
+            background:linear-gradient(135deg,var(--accent),var(--accent2));
+            color:white;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+        .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(139,92,246,0.35);}
+        .btn-cancel{padding:11px 18px;border:1.5px solid var(--border);border-radius:10px;
+            background:transparent;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+        .btn-cancel:hover{background:rgba(255,255,255,0.05);}
+
+        /* TOAST */
+        .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+            background:rgba(15,23,42,0.95);border:1px solid var(--accent);color:var(--text);
+            padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;
+            z-index:9999;opacity:0;transition:all 0.3s ease;backdrop-filter:blur(20px);
+            white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center;}
+        .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+        .toast.error{border-color:var(--danger);}
+        .toast.success{border-color:var(--success);}
+
+        @media(max-width:480px){
+            body{padding:12px;padding-bottom:32px;}
+            .stats-grid{gap:8px;}
+            .stat{padding:10px 6px;}
+            .stat-value{font-size:18px;}
+            .card{padding:14px;}
         }
     </style>
 </head>
 <body>
+<div class="container">
 
-    <div class="container">
-        <div class="header">
-            <h1>👤 Профиль</h1>
-            <button class="btn" onclick="location.href='/'">← Вернуться</button>
-        </div>
+    <div class="page-header">
+        <div class="page-title">👤 Профиль</div>
+        <button class="back-btn" onclick="location.href='/'">← Назад</button>
+    </div>
 
-        <!-- USER INFO -->
-        <div class="card">
-            <h2>Информация аккаунта</h2>
-            <div class="user-info">
-                <div class="info-item">
-                    <div class="info-label">Логин</div>
-                    <div class="info-value" id="userName">Загрузка...</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Чатов создано</div>
-                    <div class="info-value" id="chatCount">...</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Сообщений</div>
-                    <div class="info-value" id="messageCount">...</div>
-                </div>
+    <!-- SUBSCRIPTION BANNER -->
+    <div class="sub-banner inactive" id="subBanner">
+        <div class="sub-status inactive" id="subStatus">⚡ Загрузка...</div>
+        <div class="sub-detail" id="subDetail">Проверяем статус подписки</div>
+        <div class="sub-bar"><div class="sub-bar-fill" id="subBar" style="width:0%"></div></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="card">
+        <div class="card-title">Статистика</div>
+        <div class="stats-grid">
+            <div class="stat">
+                <div class="stat-label">Чатов</div>
+                <div class="stat-value" id="chatCount">—</div>
             </div>
-        </div>
-
-        <!-- ACTIONS -->
-        <div class="card">
-            <h2>🎯 Действия</h2>
-            <div class="actions">
-                <button class="btn" onclick="clearChats()" title="Очистить все чаты">🗑️ Очистить чаты</button>
-                <button class="btn" onclick="openAdminLogin()" title="Перейти в админку">👑 Админ панель</button>
-                <button class="btn btn-danger" onclick="logout()" title="Выход">⎋ Выход</button>
+            <div class="stat">
+                <div class="stat-label">Сообщений</div>
+                <div class="stat-value" id="msgCount">—</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Использовано</div>
+                <div class="stat-value" id="usedCount">—</div>
             </div>
         </div>
     </div>
 
-    <script>
-        async function load() {
-            try {
-                const res = await fetch('/me');
-                const data = await res.json();
-                
-                if (!data.user) {
-                    window.location.href = '/login_page';
-                    return;
-                }
-                
-                document.getElementById('userName').textContent = data.user;
-                
-                const chatsRes = await fetch('/chats');
-                const chats = await chatsRes.json();
-                
-                let totalMessages = 0;
-                for (const chat of chats) {
-                    const histRes = await fetch('/history/' + chat);
-                    const hist = await histRes.json();
-                    totalMessages += hist.length;
-                }
-                
-                document.getElementById('chatCount').textContent = chats.length;
-                document.getElementById('messageCount').textContent = totalMessages;
-                
-            } catch (e) {
-                console.error('Error:', e);
-                document.getElementById('userName').textContent = 'Ошибка';
+    <!-- ACCOUNT -->
+    <div class="card">
+        <div class="card-title">Аккаунт</div>
+        <div class="info-row">
+            <div class="info-left">
+                <div class="info-key">Логин</div>
+                <div class="info-val accent" id="userName">...</div>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-left">
+                <div class="info-key">Email</div>
+                <div class="info-val" id="userEmail">Не указан</div>
+            </div>
+            <button class="edit-btn" onclick="openModal('emailModal')">✏️ Изменить</button>
+        </div>
+        <div class="info-row">
+            <div class="info-left">
+                <div class="info-key">Пароль</div>
+                <div class="info-val">••••••••</div>
+            </div>
+            <button class="edit-btn" onclick="openModal('passModal')">✏️ Изменить</button>
+        </div>
+    </div>
+
+    <!-- ACTIVATION KEY -->
+    <div class="card">
+        <div class="card-title">🔑 Активировать подписку</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:0;">Введите ключ активации для получения подписки</div>
+        <div class="key-row">
+            <input class="key-input" id="keyInput" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" maxlength="23"
+                oninput="formatKey(this)">
+            <button class="key-btn" onclick="activateKey()">Активировать</button>
+        </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="card">
+        <div class="card-title">Действия</div>
+        <div class="actions">
+            <button class="action-btn" onclick="clearChats()">🗑️ Очистить все чаты</button>
+            <button class="action-btn" onclick="openAdminLogin()">👑 Админ панель</button>
+            <button class="action-btn danger" onclick="doLogout()">⎋ Выйти из аккаунта</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL: CHANGE PASSWORD -->
+<div class="modal" id="passModal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeModal('passModal')">✕</button>
+        <div class="modal-title">🔑 Сменить пароль</div>
+        <div class="field"><label>Текущий пароль</label>
+            <input type="password" id="currentPass" placeholder="Текущий пароль"></div>
+        <div class="field"><label>Новый пароль</label>
+            <input type="password" id="newPass" placeholder="Минимум 6 символов"></div>
+        <div class="field"><label>Повторите пароль</label>
+            <input type="password" id="confirmPass" placeholder="Повторите новый пароль"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('passModal')">Отмена</button>
+            <button class="btn-primary" onclick="changePassword()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: CHANGE EMAIL -->
+<div class="modal" id="emailModal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeModal('emailModal')">✕</button>
+        <div class="modal-title">📧 Изменить email</div>
+        <div class="field"><label>Email адрес</label>
+            <input type="email" id="newEmail" placeholder="example@mail.com"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('emailModal')">Отмена</button>
+            <button class="btn-primary" onclick="changeEmail()">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function showToast(msg,type='info'){
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.className='toast show '+(type||'');
+    clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',3000);
+}
+function openModal(id){document.getElementById(id).classList.add('active');}
+function closeModal(id){
+    document.getElementById(id).classList.remove('active');
+    document.getElementById(id).querySelectorAll('input').forEach(i=>i.value='');
+}
+document.querySelectorAll('.modal').forEach(m=>{
+    m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id);});
+});
+
+function formatKey(input){
+    let v=input.value.replace(/[^A-Z0-9]/gi,'').toUpperCase();
+    let parts=[]; for(let i=0;i<v.length&&i<20;i+=5)parts.push(v.slice(i,i+5));
+    input.value=parts.join('-');
+}
+
+async function load(){
+    try{
+        const res=await fetch('/me');
+        const data=await res.json();
+        if(!data.user){window.location.href='/login_page';return;}
+        document.getElementById('userName').textContent=data.user;
+        document.getElementById('userEmail').textContent=data.email||'Не указан';
+        if(data.email)document.getElementById('newEmail').value=data.email;
+        document.getElementById('usedCount').textContent=data.sub?.messages_used||0;
+
+        // Subscription banner
+        const sub=data.sub;
+        const banner=document.getElementById('subBanner');
+        const status=document.getElementById('subStatus');
+        const detail=document.getElementById('subDetail');
+        const bar=document.getElementById('subBar');
+        if(sub&&sub.active){
+            banner.className='sub-banner active';
+            status.className='sub-status active';
+            status.textContent='✅ Подписка активна';
+            if(sub.type==='lifetime'){
+                detail.textContent='Бессрочная подписка';
+                bar.style.width='100%';
+            } else {
+                detail.textContent='Действует до: '+sub.until;
+                // Calculate progress
+                const now=new Date(); const end=new Date(sub.until);
+                const total=30*parseInt(sub.type)*24*3600*1000;
+                const left=end-now; const pct=Math.max(5,Math.min(100,left/total*100));
+                bar.style.width=pct+'%';
             }
+        } else {
+            banner.className='sub-banner inactive';
+            status.className='sub-status inactive';
+            status.textContent='❌ Подписка не активна';
+            const used=sub?.messages_used||0; const left=Math.max(0,20-used);
+            detail.textContent=`Бесплатно: осталось ${left} из 20 сообщений`;
+            bar.style.width=(used/20*100)+'%';
+            bar.style.background='linear-gradient(90deg,#ef4444,#f59e0b)';
         }
 
-        async function clearChats() {
-            if (!confirm('⚠️ Очистить ВСЕ чаты? Это нельзя отменить!')) return;
-            
-            try {
-                const chatsRes = await fetch('/chats');
-                const chats = await chatsRes.json();
-                
-                for (const chat of chats) {
-                    await fetch('/clear_chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ chat })
-                    });
-                }
-                
-                alert('✓ Все чаты очищены');
-                load();
-            } catch (e) {
-                alert('❌ Ошибка: ' + e.message);
-            }
-        }
+        // Chats stats
+        const chatsRes=await fetch('/chats');
+        const chats=await chatsRes.json();
+        document.getElementById('chatCount').textContent=chats.length;
+        let total=0;
+        for(const c of chats) total+=c.message_count||0;
+        document.getElementById('msgCount').textContent=total;
+    }catch(e){console.error(e);}
+}
 
-        function openAdminLogin() {
-            const login = prompt('Логин администратора:');
-            if (!login) return;
-            
-            const password = prompt('Пароль администратора:');
-            if (!password) return;
-            
-            fetch('/admin_login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ login, password })
-            })
-            .then(r => r.json())
-            .then(d => {
-                if (d.status === 'ok') {
-                    window.location.href = '/admin';
-                } else {
-                    alert('❌ Неверный логин или пароль');
-                }
-            })
-            .catch(e => alert('❌ Ошибка: ' + e.message));
-        }
+async function activateKey(){
+    const key=document.getElementById('keyInput').value.trim();
+    if(!key)return showToast('Введите ключ','error');
+    try{
+        const res=await fetch('/activate_key',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
+        const data=await res.json();
+        if(data.status==='ok'){showToast('✓ Подписка активирована!','success');load();}
+        else showToast('✗ '+(data.message||'Ошибка'),'error');
+    }catch(e){showToast('✗ Ошибка сервера','error');}
+}
 
-        function logout() {
-            if (confirm('Выйти из аккаунта?')) {
-                window.location.href = '/logout';
-            }
-        }
+async function changePassword(){
+    const current=document.getElementById('currentPass').value;
+    const newp=document.getElementById('newPass').value;
+    const confirm=document.getElementById('confirmPass').value;
+    if(!current||!newp||!confirm)return showToast('Заполните все поля','error');
+    if(newp!==confirm)return showToast('Пароли не совпадают','error');
+    if(newp.length<6)return showToast('Пароль минимум 6 символов','error');
+    try{
+        const res=await fetch('/change_password',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({current_password:current,new_password:newp})});
+        const data=await res.json();
+        if(data.status==='ok'){showToast('✓ Пароль изменён','success');closeModal('passModal');}
+        else showToast('✗ '+(data.message||'Ошибка'),'error');
+    }catch(e){showToast('✗ Ошибка сервера','error');}
+}
 
-        load();
-    </script>
+async function changeEmail(){
+    const email=document.getElementById('newEmail').value.trim();
+    if(!email)return showToast('Введите email','error');
+    try{
+        const res=await fetch('/change_email',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({email})});
+        const data=await res.json();
+        if(data.status==='ok'){
+            showToast('✓ Email сохранён','success');
+            document.getElementById('userEmail').textContent=email;
+            closeModal('emailModal');
+        }else showToast('✗ '+(data.message||'Ошибка'),'error');
+    }catch(e){showToast('✗ Ошибка сервера','error');}
+}
 
+async function clearChats(){
+    if(!confirm('Очистить ВСЕ чаты?'))return;
+    const chats=await fetch('/chats').then(r=>r.json());
+    for(const c of chats){
+        await fetch('/clear_chat',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({chat:c.id})});
+    }
+    showToast('✓ Чаты очищены','success'); load();
+}
+
+function openAdminLogin(){
+    const login=prompt('Логин администратора:'); if(!login)return;
+    const password=prompt('Пароль администратора:'); if(!password)return;
+    fetch('/admin_login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({login,password})})
+    .then(r=>r.json()).then(d=>{
+        if(d.status==='ok')window.location.href='/admin';
+        else showToast('✗ Неверный логин или пароль','error');
+    });
+}
+
+function doLogout(){
+    if(confirm('Выйти из аккаунта?'))window.location.href='/logout';
+}
+
+load();
+</script>
 </body>
 </html>
