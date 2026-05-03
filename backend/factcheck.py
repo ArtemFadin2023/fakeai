@@ -6,22 +6,23 @@ from dotenv import load_dotenv
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-API_KEY = os.getenv("ANTHROPIC_API_KEY")
+API_KEY = os.getenv("OPENROUTER_API_KEY")
+MODEL = "google/gemma-4-26b-a4b-it:free"
 
 def ai_request(system_prompt, user_message):
     if not API_KEY:
         return None
     try:
         response = requests.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={"x-api-key": API_KEY, "Content-Type": "application/json", "anthropic-version": "2023-06-01"},
-            json={"model": "claude-opus-4-20250805", "max_tokens": 1000, "system": system_prompt, "messages": [{"role": "user", "content": user_message}]},
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
+            json={"model": MODEL, "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_message}], "temperature": 0.7, "max_tokens": 1000},
             timeout=60
         )
         data = response.json()
-        return data["content"][0]["text"] if data.get("content") else None
+        return data["choices"][0]["message"]["content"] if data.get("choices") else None
     except Exception as e:
-        print(f"Claude API Error: {e}")
+        print(f"OpenRouter API Error: {e}")
         return None
 
 def build_chat(text):
