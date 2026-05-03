@@ -454,18 +454,18 @@ def ai():
     else:
         chat_title = None; history = raw or []
 
+    # ✅ КОНТЕКСТ СОХРАНЁН
     context = "".join(f"User: {m.get('user','')}\nAI: {m.get('bot','')}\n" for m in history[-30:])
-    full_prompt = context + f"User: {text}\nAI:"
+    full_prompt = context + f"User: {text}"
 
     try:
         if mode == "chat": result = build_chat(full_prompt)
         elif mode == "smart": result = build_smart(full_prompt)
         elif mode == "news": result = build_news(full_prompt)
         else: result = build_chat(full_prompt)
-        if not result or result.startswith("⚠️"):
-            result = "⚠️ Сервис временно недоступен. Попробуй позже."
     except Exception as e:
-        print(f"AI ERROR: {e}"); result = "⚠️ Ошибка обработки"
+        print(f"AI ERROR: {e}")
+        result = "⚠️ Ошибка обработки"
 
     new_title = chat_title
     if not chat_title and len(history) == 0:
