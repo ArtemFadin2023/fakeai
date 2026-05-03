@@ -15,8 +15,8 @@ def ai_request(system_prompt, user_message):
         response = requests.post(
             "https://api.anthropic.com/v1/messages",
             headers={"x-api-key": API_KEY, "Content-Type": "application/json", "anthropic-version": "2023-06-01"},
-            json={"model": "claude-3-5-haiku-20241022", "max_tokens": 500, "system": system_prompt, "messages": [{"role": "user", "content": user_message}]},
-            timeout=30
+            json={"model": "claude-opus-4-20250805", "max_tokens": 1000, "system": system_prompt, "messages": [{"role": "user", "content": user_message}]},
+            timeout=60
         )
         data = response.json()
         return data["content"][0]["text"] if data.get("content") else None
@@ -25,11 +25,11 @@ def ai_request(system_prompt, user_message):
         return None
 
 def build_chat(text):
-    result = ai_request("Ты полезный AI ассистент. Отвечай кратко и дружелюбно на русском языке.", text[:2000])
+    result = ai_request("Ты полезный AI ассистент. Отвечай кратко и дружелюбно на русском языке.", text[:3000])
     return result or "⚠️ Сервис временно недоступен"
 
 def build_smart(text):
-    result = ai_request("Ты умный аналитик. Дай развернутый ответ с логическим разбором. Ответ на русском языке.", text[:2000])
+    result = ai_request("Ты умный аналитик. Дай развернутый ответ с логическим разбором. Ответ на русском языке.", text[:3000])
     return result or "⚠️ Сервис временно недоступен"
 
 def parse_verdict(text):
@@ -45,7 +45,7 @@ def parse_verdict(text):
     return verdict, confidence, text
 
 def build_news(text):
-    result = ai_request("Ты эксперт по проверке фактов. Верни: VERDICT: [ФЕЙК/ПРАВДА/НЕЯСНО], CONFIDENCE: [0-100]%, EXPLANATION: [объяснение]", text[:2000])
+    result = ai_request("Ты эксперт по проверке фактов. Верни: VERDICT: [ФЕЙК/ПРАВДА/НЕЯСНО], CONFIDENCE: [0-100]%, EXPLANATION: [объяснение]", text[:3000])
     if not result:
         return "⚠️ Сервис временно недоступен"
     verdict, confidence, explanation = parse_verdict(result)
