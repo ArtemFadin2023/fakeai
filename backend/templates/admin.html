@@ -7,12 +7,10 @@
     <title>Админ - FakeNewsAI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
     <style>
-        /* KEYS SECTION */
         .section{margin-bottom:32px;}
         .section-title{font-size:18px;font-weight:700;color:#a78bfa;margin-bottom:16px;
             display:flex;align-items:center;gap:8px;}
 
-        /* KEY GENERATOR */
         .key-gen{background:rgba(30,41,59,0.6);border:1px solid rgba(139,92,246,0.2);
             border-radius:14px;padding:20px;margin-bottom:24px;}
         .key-gen-title{font-size:14px;font-weight:700;color:#94a3b8;margin-bottom:14px;
@@ -28,7 +26,6 @@
             font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;}
         .gen-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(139,92,246,0.35);}
 
-        /* GENERATED KEY */
         .generated-key{background:rgba(15,23,42,0.8);border:1.5px solid rgba(16,185,129,0.4);
             border-radius:12px;padding:14px 16px;margin-top:14px;display:none;}
         .generated-key.show{display:block;}
@@ -40,8 +37,7 @@
             cursor:pointer;margin-top:10px;transition:all 0.2s;}
         .copy-btn:hover{background:rgba(16,185,129,0.2);}
 
-        /* KEYS LIST */
-        .keys-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;}
+        .keys-list{display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;}
         .key-item{background:rgba(30,41,59,0.5);border:1px solid rgba(148,163,184,0.1);
             border-radius:10px;padding:12px 14px;display:flex;align-items:center;
             justify-content:space-between;gap:12px;flex-wrap:wrap;}
@@ -52,7 +48,6 @@
         .key-badge.free{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);}
         .key-badge.used{background:rgba(148,163,184,0.1);color:#94a3b8;border:1px solid rgba(148,163,184,0.2);}
 
-        /* USERS TABLE */
         .users-grid{display:flex;flex-direction:column;gap:10px;}
         .user-card{background:rgba(30,41,59,0.6);border:1px solid rgba(148,163,184,0.12);
             border-radius:14px;padding:16px;transition:all 0.3s;}
@@ -74,7 +69,6 @@
         .ua-btn.success{border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.1);color:#34d399;}
         .ua-btn.success:hover{background:rgba(16,185,129,0.25);}
 
-        /* SUB SELECTOR */
         .sub-selector{display:none;margin-top:10px;padding:12px;background:rgba(15,23,42,0.8);
             border-radius:10px;border:1px solid rgba(139,92,246,0.2);}
         .sub-selector.open{display:block;}
@@ -85,7 +79,6 @@
         .sub-opt:hover,.sub-opt.sel{background:linear-gradient(135deg,#8b5cf6,#7c3aed);
             color:white;border-color:#8b5cf6;}
 
-        /* MODAL */
         .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);
             backdrop-filter:blur(8px);z-index:1000;align-items:center;justify-content:center;padding:16px;}
         .modal.active{display:flex;}
@@ -104,7 +97,6 @@
         .btn-cancel{padding:11px 16px;border:1.5px solid rgba(148,163,184,0.2);border-radius:10px;
             background:transparent;color:#94a3b8;font-size:14px;font-weight:600;cursor:pointer;}
 
-        /* TOAST */
         .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
             background:rgba(15,23,42,0.95);border:1px solid #8b5cf6;color:#f1f5f9;
             padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;
@@ -113,7 +105,6 @@
         .toast.error{border-color:#ef4444;}
         .toast.success{border-color:#10b981;}
 
-        /* SEARCH */
         .search{margin-bottom:20px;}
         .search input{width:100%;padding:11px 14px;border:1.5px solid rgba(148,163,184,0.15);
             border-radius:10px;background:rgba(30,41,59,0.6);color:#f1f5f9;font-size:14px;outline:none;transition:all 0.2s;}
@@ -168,6 +159,11 @@
             </div>
         </div>
 
+        <!-- KEYS SEARCH -->
+        <div class="search" style="margin-bottom:16px;">
+            <input id="keySearch" placeholder="🔍 Поиск ключей..." oninput="renderKeys()">
+        </div>
+
         <!-- KEYS LIST -->
         <div class="section-title">📋 Все ключи</div>
         <div class="keys-list" id="keysList">
@@ -190,7 +186,7 @@
     <div class="toast" id="toast"></div>
 
 <script>
-    let users = [], selectedMonths = 1, currentPwLogin = '';
+    let users = [], allKeys = [], selectedMonths = 1, currentPwLogin = '';
     const MONTHS_LABEL = {0:'Бессрочно',1:'1 мес',3:'3 мес',6:'6 мес',12:'12 мес'};
 
     function showToast(msg,type='info'){
@@ -213,6 +209,7 @@
     }
 
     // ===== USERS =====
+    // 🔒 ИСПРАВЛЕНИЕ: Поиск работает ТОЛЬКО по введённому тексту, не выводит логин сразу
     async function loadUsers(){
         try{
             const res=await fetch('/admin/users');
@@ -225,9 +222,21 @@
     function renderUsers(){
         const q=document.getElementById('search').value.toLowerCase();
         const list=document.getElementById('usersList');
+        
+        // 🔒 ИСПРАВЛЕНИЕ: Пусто если поле пусто
+        if(!q){
+            list.innerHTML='<div style="color:#94a3b8;text-align:center;padding:40px;">Введите логин для поиска</div>';
+            return;
+        }
+        
         const filtered=users.filter(u=>
             u.login.toLowerCase().includes(q)||u.email.toLowerCase().includes(q));
-        if(!filtered.length){list.innerHTML='<div style="color:#94a3b8;text-align:center;padding:40px;">Нет пользователей</div>';return;}
+        
+        if(!filtered.length){
+            list.innerHTML='<div style="color:#94a3b8;text-align:center;padding:40px;">Пользователей не найдено</div>';
+            return;
+        }
+        
         list.innerHTML='';
         filtered.forEach(u=>{
             const div=document.createElement('div');
@@ -347,24 +356,37 @@
     async function loadKeys(){
         try{
             const res=await fetch('/admin/keys');
-            const keys=await res.json();
-            const list=document.getElementById('keysList');
-            if(!keys.length){list.innerHTML='<div style="color:#94a3b8;text-align:center;padding:20px;">Нет ключей</div>';return;}
-            list.innerHTML='';
-            keys.forEach(k=>{
-                const div=document.createElement('div');
-                div.className='key-item'+(k.used_by?' used':'');
-                div.innerHTML=`
-                    <div>
-                        <div class="key-code">${k.key}</div>
-                        <div class="key-info">${MONTHS_LABEL[k.months]||k.months+' мес'} · ${k.created}</div>
-                        ${k.used_by?`<div class="key-info">Использован: ${k.used_by} · ${k.used_at}</div>`:''}
-                    </div>
-                    <span class="key-badge ${k.used_by?'used':'free'}">${k.used_by?'Использован':'Свободен'}</span>
-                `;
-                list.appendChild(div);
-            });
+            allKeys=await res.json();
+            renderKeys();
         }catch(e){}
+    }
+
+    // 🔒 ИСПРАВЛЕНИЕ: Добавлен поиск по ключам
+    function renderKeys(){
+        const q=document.getElementById('keySearch').value.toUpperCase();
+        const list=document.getElementById('keysList');
+        
+        const filtered = allKeys.filter(k => !q || k.key.includes(q) || (k.used_by && k.used_by.toLowerCase().includes(q)));
+        
+        if(!filtered.length){
+            list.innerHTML='<div style="color:#94a3b8;text-align:center;padding:20px;">Ключей не найдено</div>';
+            return;
+        }
+        
+        list.innerHTML='';
+        filtered.forEach(k=>{
+            const div=document.createElement('div');
+            div.className='key-item'+(k.used_by?' used':'');
+            div.innerHTML=`
+                <div>
+                    <div class="key-code">${k.key}</div>
+                    <div class="key-info">${MONTHS_LABEL[k.months]||k.months+' мес'} · ${k.created}</div>
+                    ${k.used_by?`<div class="key-info">Использован: ${k.used_by} · ${k.used_at}</div>`:''}
+                </div>
+                <span class="key-badge ${k.used_by?'used':'free'}">${k.used_by?'Использован':'Свободен'}</span>
+            `;
+            list.appendChild(div);
+        });
     }
 
     function escHtml(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}

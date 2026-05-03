@@ -205,13 +205,25 @@ def admin_keys():
 def activate_key():
     user = session.get("user")
     if not user: return jsonify({"status":"error"}), 401
-    key = (request.get_json() or {}).get("key","").strip().upper()
-    if not key: return jsonify({"status":"error","message":"Введите ключ"}), 400
+    key = (request.get_json() or {}).get("key","").strip()
+    
+    # 🔒 ИСПРАВЛЕНИЕ: Валидация - только буквы, цифры и дефисы
+    if not re.match(r'^[A-Z0-9\-]+$', key.upper()): 
+        return jsonify({"status":"error","message":"Неверный формат ключа"}), 400
+    if not key: 
+        return jsonify({"status":"error","message":"Введите ключ"}), 400
+    
     db = get_db()
-    row = db.execute("SELECT months,used_by FROM activation_keys WHERE key=?", (key,)).fetchone()
-    if not row: db.close(); return jsonify({"status":"error","message":"Ключ не найден"}), 404
+    row = db.execute("SELECT months,used_by FROM activation_keys WHERE UPPER(key)=UPPER(?)", (key,)).fetchone()
+    if not row: 
+        db.close()
+        return jsonify({"status":"error","message":"Ключ не найден"}), 404
+    
     months, used_by = row
-    if used_by: db.close(); return jsonify({"status":"error","message":"Ключ уже использован"}), 409
+    if used_by: 
+        db.close()
+        return jsonify({"status":"error","message":"Ключ уже использован"}), 409
+    
     if months == 0:
         db.execute("UPDATE users SET sub_until=NULL,sub_type='lifetime' WHERE login=?", (user,))
     else:
@@ -224,6 +236,7 @@ def activate_key():
             except: pass
         until = (base+timedelta(days=30*months)).strftime("%Y-%m-%d")
         db.execute("UPDATE users SET sub_until=?,sub_type=? WHERE login=?", (until,f"{months}m",user))
+    
     db.execute("UPDATE activation_keys SET used_by=?,used_at=? WHERE key=?",
                (user,datetime.now().strftime("%Y-%m-%d %H:%M"),key))
     db.commit(); db.close()
