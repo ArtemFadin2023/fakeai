@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -105,8 +105,9 @@
         .toast.error{border-color:#ef4444;}
         .toast.success{border-color:#10b981;}
 
-        .search{margin-bottom:20px;}
-        .search input{width:100%;padding:11px 14px;border:1.5px solid rgba(148,163,184,0.15);
+        .search{margin-bottom:20px;position:relative;}
+        .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;pointer-events:none;}
+        .search input{width:100%;padding:11px 14px 11px 34px;border:1.5px solid rgba(148,163,184,0.15);
             border-radius:10px;background:rgba(30,41,59,0.6);color:#f1f5f9;font-size:14px;outline:none;transition:all 0.2s;}
         .search input:focus{border-color:#8b5cf6;}
         .tabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;}
@@ -132,7 +133,8 @@
     <!-- USERS TAB -->
     <div id="tab-users">
         <div class="search">
-            <input id="search" placeholder="🔍 Поиск по логину или email..." oninput="renderUsers()">
+            <span class="search-icon">🔍</span>
+            <input id="search" placeholder="Поиск по логину или email..." oninput="renderUsers()">
         </div>
         <div class="users-grid" id="usersList">
             <div class="loader"></div>
@@ -161,7 +163,8 @@
 
         <!-- KEYS SEARCH -->
         <div class="search" style="margin-bottom:16px;">
-            <input id="keySearch" placeholder="🔍 Поиск ключей..." oninput="renderKeys()">
+            <span class="search-icon">🔍</span>
+            <input id="keySearch" placeholder="Поиск ключей..." oninput="renderKeys()">
         </div>
 
         <!-- KEYS LIST -->
@@ -174,7 +177,7 @@
     <!-- MODAL: CHANGE PASSWORD -->
     <div class="modal" id="pwModal">
         <div class="modal-box">
-            <div class="modal-title">🔑 Сменить пароль</div>
+            <div class="modal-title">🔒 Сменить пароль</div>
             <input class="modal-input" type="password" id="newPw" placeholder="Новый пароль">
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeModal('pwModal')">Отмена</button>
@@ -187,70 +190,67 @@
 
 <script>
     let users = [], allKeys = [], selectedMonths = 1, currentPwLogin = '';
-    const MONTHS_LABEL = {0:'Бессрочно',1:'1 мес',3:'3 мес',6:'6 мес',12:'12 мес'};
+    const MONTHS_LABEL = {0:'Бессрочно', 1:'1 мес', 3:'3 мес', 6:'6 мес', 12:'12 мес'};
 
-    function showToast(msg,type='info'){
-        const t=document.getElementById('toast');
-        t.textContent=msg; t.className='toast show '+(type||'');
-        clearTimeout(t._t); t._t=setTimeout(()=>t.className='toast',3000);
+    function showToast(msg, type='info'){
+        const t = document.getElementById('toast');
+        t.textContent = msg; t.className = 'toast show ' + (type||'');
+        clearTimeout(t._t); t._t = setTimeout(() => t.className = 'toast', 3000);
     }
     function closeModal(id){
         document.getElementById(id).classList.remove('active');
-        document.getElementById(id).querySelectorAll('input').forEach(i=>i.value='');
+        document.getElementById(id).querySelectorAll('input').forEach(i => i.value = '');
     }
 
     function switchTab(tab){
-        document.getElementById('tab-users').style.display = tab==='users'?'':'none';
-        document.getElementById('tab-keys').style.display = tab==='keys'?'':'none';
-        document.querySelectorAll('.tab').forEach((t,i)=>{
+        document.getElementById('tab-users').style.display = tab==='users' ? '' : 'none';
+        document.getElementById('tab-keys').style.display = tab==='keys' ? '' : 'none';
+        document.querySelectorAll('.tab').forEach((t,i) => {
             t.classList.toggle('active', (i===0&&tab==='users')||(i===1&&tab==='keys'));
         });
-        if(tab==='keys') loadKeys();
+        if(tab === 'keys') loadKeys();
     }
 
     // ===== USERS =====
-    // 🔒 ИСПРАВЛЕНИЕ: Поиск работает ТОЛЬКО по введённому тексту, не выводит логин сразу
     async function loadUsers(){
         try{
-            const res=await fetch('/admin/users');
-            if(res.status===403){window.location.href='/profile';return;}
-            users=await res.json();
+            const res = await fetch('/admin/users');
+            if(res.status === 403){ window.location.href = '/profile'; return; }
+            users = await res.json();
             renderUsers();
-        }catch(e){document.getElementById('usersList').innerHTML='❌ Ошибка загрузки';}
+        }catch(e){ document.getElementById('usersList').innerHTML = '❌ Ошибка загрузки'; }
     }
 
     function renderUsers(){
-        const q=document.getElementById('search').value.toLowerCase();
-        const list=document.getElementById('usersList');
+        const q = document.getElementById('search').value.toLowerCase();
+        const list = document.getElementById('usersList');
         
-        // 🔒 ИСПРАВЛЕНИЕ: Пусто если поле пусто
-        if(!q){
-            list.innerHTML='<div style="color:#94a3b8;text-align:center;padding:40px;">Введите логин для поиска</div>';
-            return;
-        }
-        
-        const filtered=users.filter(u=>
-            u.login.toLowerCase().includes(q)||u.email.toLowerCase().includes(q));
+        const filtered = users.filter(u => {
+            if(!q) return true;
+            const login = (u.login||'').toLowerCase();
+            const email = (u.email||'').toLowerCase();
+            return login.includes(q) || email.includes(q);
+        });
         
         if(!filtered.length){
-            list.innerHTML='<div style="color:#94a3b8;text-align:center;padding:40px;">Пользователей не найдено</div>';
+            list.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:40px;">Пользователей не найдено</div>';
             return;
         }
         
-        list.innerHTML='';
-        filtered.forEach(u=>{
-            const div=document.createElement('div');
-            div.className='user-card';
-            const subLabel = u.sub_type==='lifetime'?'♾️ Бессрочно':
-                u.sub_active?`до ${u.sub_until}`:'Нет подписки';
-            div.innerHTML=`
+        list.innerHTML = '';
+        filtered.forEach(u => {
+            const div = document.createElement('div');
+            div.className = 'user-card';
+            const subLabel = u.sub_type === 'lifetime' ? '♾️ Бессрочно' :
+                u.sub_active ? `до ${u.sub_until}` : 'Нет подписки';
+            div.innerHTML = `
                 <div class="user-top">
                     <div>
                         <div class="user-login">👤 ${escHtml(u.login)}</div>
                         <div class="user-email">${escHtml(u.email)}</div>
                     </div>
                     <span class="sub-badge ${u.sub_active?'active':'inactive'}">
-                        ${u.sub_active?'✅ Активна':'❌ Нет'}</span>
+                        ${u.sub_active ? '✅ Активна' : '❌ Нет'}</span>
                 </div>
                 <div class="user-meta">
                     <span>📅 ${u.created}</span>
@@ -260,7 +260,7 @@
                 </div>
                 <div class="user-actions">
                     <button class="ua-btn success" onclick="toggleSubPanel('${u.login}')">⭐ Подписка</button>
-                    <button class="ua-btn" onclick="openChangePw('${u.login}')">🔑 Пароль</button>
+                    <button class="ua-btn" onclick="openChangePw('${u.login}')">🔒 Пароль</button>
                     <button class="ua-btn danger" onclick="deleteUser('${u.login}')">🗑️ Удалить</button>
                 </div>
                 <div class="sub-selector" id="sub-${u.login}">
@@ -280,116 +280,115 @@
     }
 
     function toggleSubPanel(login){
-        const el=document.getElementById('sub-'+login);
+        const el = document.getElementById('sub-' + login);
         el.classList.toggle('open');
     }
 
     async function setSub(login, months){
         try{
-            const res=await fetch('/admin/set_sub',{method:'POST',headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({login,months})});
-            const data=await res.json();
-            if(data.status==='ok'){
-                showToast('✓ Подписка обновлена','success');
-                document.getElementById('sub-'+login).classList.remove('open');
+            const res = await fetch('/admin/set_sub', {method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({login, months})});
+            const data = await res.json();
+            if(data.status === 'ok'){
+                showToast('✓ Подписка обновлена', 'success');
+                document.getElementById('sub-' + login).classList.remove('open');
                 await loadUsers();
-            }else showToast('✗ Ошибка','error');
-        }catch(e){showToast('✗ Ошибка сервера','error');}
+            } else showToast('✗ Ошибка', 'error');
+        }catch(e){ showToast('✗ Ошибка сервера', 'error'); }
     }
 
     function openChangePw(login){
-        currentPwLogin=login;
+        currentPwLogin = login;
         document.getElementById('pwModal').classList.add('active');
     }
 
     async function confirmChangePw(){
-        const pw=document.getElementById('newPw').value;
-        if(!pw||pw.length<6)return showToast('Пароль минимум 6 символов','error');
+        const pw = document.getElementById('newPw').value;
+        if(!pw || pw.length < 6) return showToast('Пароль минимум 6 символов', 'error');
         try{
-            const res=await fetch('/admin/change_password',{method:'POST',headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({login:currentPwLogin,password:pw})});
-            const data=await res.json();
-            if(data.status==='ok'){showToast('✓ Пароль изменён','success');closeModal('pwModal');}
-            else showToast('✗ Ошибка','error');
-        }catch(e){showToast('✗ Ошибка сервера','error');}
+            const res = await fetch('/admin/change_password', {method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({login:currentPwLogin, password:pw})});
+            const data = await res.json();
+            if(data.status === 'ok'){ showToast('✓ Пароль изменён', 'success'); closeModal('pwModal'); }
+            else showToast('✗ Ошибка', 'error');
+        }catch(e){ showToast('✗ Ошибка сервера', 'error'); }
     }
 
     async function deleteUser(login){
-        if(!confirm(`Удалить аккаунт "${login}"? Это нельзя отменить!`))return;
+        if(!confirm(`Удалить аккаунт "${login}"? Это нельзя отменить!`)) return;
         try{
-            const res=await fetch('/admin/delete_user',{method:'POST',headers:{'Content-Type':'application/json'},
+            const res = await fetch('/admin/delete_user', {method:'POST', headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({login})});
-            const data=await res.json();
-            if(data.status==='ok'){showToast('✓ Аккаунт удалён','success');await loadUsers();}
-            else showToast('✗ Ошибка','error');
-        }catch(e){showToast('✗ Ошибка сервера','error');}
+            const data = await res.json();
+            if(data.status === 'ok'){ showToast('✓ Аккаунт удалён', 'success'); await loadUsers(); }
+            else showToast('✗ Ошибка', 'error');
+        }catch(e){ showToast('✗ Ошибка сервера', 'error'); }
     }
 
     // ===== KEYS =====
     function selectDur(btn){
-        document.querySelectorAll('.dur-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        selectedMonths=parseInt(btn.dataset.months);
+        selectedMonths = parseInt(btn.dataset.months);
     }
 
     async function generateKey(){
         try{
-            const res=await fetch('/admin/generate_key',{method:'POST',headers:{'Content-Type':'application/json'},
+            const res = await fetch('/admin/generate_key', {method:'POST', headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({months:selectedMonths})});
-            const data=await res.json();
-            if(data.status==='ok'){
-                const result=document.getElementById('genResult');
-                document.getElementById('genKeyVal').textContent=data.key;
-                document.getElementById('genKeyMeta').textContent=
-                    'Срок: '+(selectedMonths===0?'Бессрочно':selectedMonths+' мес.');
+            const data = await res.json();
+            if(data.status === 'ok'){
+                const result = document.getElementById('genResult');
+                document.getElementById('genKeyVal').textContent = data.key;
+                document.getElementById('genKeyMeta').textContent =
+                    'Срок: ' + (selectedMonths === 0 ? 'Бессрочно' : selectedMonths + ' мес.');
                 result.classList.add('show');
                 loadKeys();
             }
-        }catch(e){showToast('✗ Ошибка','error');}
+        }catch(e){ showToast('✗ Ошибка', 'error'); }
     }
 
     function copyKey(){
-        const key=document.getElementById('genKeyVal').textContent;
-        navigator.clipboard.writeText(key).then(()=>showToast('✓ Скопировано','success'));
+        const key = document.getElementById('genKeyVal').textContent;
+        navigator.clipboard.writeText(key).then(() => showToast('✓ Скопировано', 'success'));
     }
 
     async function loadKeys(){
         try{
-            const res=await fetch('/admin/keys');
-            allKeys=await res.json();
+            const res = await fetch('/admin/keys');
+            allKeys = await res.json();
             renderKeys();
         }catch(e){}
     }
 
-    // 🔒 ИСПРАВЛЕНИЕ: Добавлен поиск по ключам
     function renderKeys(){
-        const q=document.getElementById('keySearch').value.toUpperCase();
-        const list=document.getElementById('keysList');
+        const q = document.getElementById('keySearch').value.toUpperCase();
+        const list = document.getElementById('keysList');
         
         const filtered = allKeys.filter(k => !q || k.key.includes(q) || (k.used_by && k.used_by.toLowerCase().includes(q)));
         
         if(!filtered.length){
-            list.innerHTML='<div style="color:#94a3b8;text-align:center;padding:20px;">Ключей не найдено</div>';
+            list.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:20px;">Ключей не найдено</div>';
             return;
         }
         
-        list.innerHTML='';
-        filtered.forEach(k=>{
-            const div=document.createElement('div');
-            div.className='key-item'+(k.used_by?' used':'');
-            div.innerHTML=`
+        list.innerHTML = '';
+        filtered.forEach(k => {
+            const div = document.createElement('div');
+            div.className = 'key-item' + (k.used_by ? ' used' : '');
+            div.innerHTML = `
                 <div>
                     <div class="key-code">${k.key}</div>
-                    <div class="key-info">${MONTHS_LABEL[k.months]||k.months+' мес'} · ${k.created}</div>
-                    ${k.used_by?`<div class="key-info">Использован: ${k.used_by} · ${k.used_at}</div>`:''}
+                    <div class="key-info">${MONTHS_LABEL[k.months] || k.months + ' мес'} · ${k.created}</div>
+                    ${k.used_by ? `<div class="key-info">Использован: ${k.used_by} · ${k.used_at}</div>` : ''}
                 </div>
-                <span class="key-badge ${k.used_by?'used':'free'}">${k.used_by?'Использован':'Свободен'}</span>
+                <span class="key-badge ${k.used_by ? 'used' : 'free'}">${k.used_by ? 'Использован' : 'Свободен'}</span>
             `;
             list.appendChild(div);
         });
     }
 
-    function escHtml(t){const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+    function escHtml(t){ const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
     loadUsers();
 </script>

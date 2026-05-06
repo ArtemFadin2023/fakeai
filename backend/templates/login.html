@@ -1,75 +1,93 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
     <title>Вход - FakeNewsAI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    <style>
+        /* Disable RGB/gradient overflow animations on login page */
+        body {
+            animation: none !important;
+            background: #0f172a !important;
+        }
+        body::before,
+        body::after {
+            animation: none !important;
+            background-image: none !important;
+        }
+        .progress-bar-fill,
+        .card::before {
+            animation: none !important;
+        }
+    </style>
 </head>
 <body>
 
     <div class="container">
         <div class="card">
-            
-            <!-- HEADER -->
             <div class="header">
-                <div class="logo">🔐 FakeNewsAI</div>
+                <div class="logo" aria-hidden="true">🔐 FakeNewsAI</div>
                 <h1 class="title" id="title">Вход</h1>
-                <p class="subtitle">Войдите в свой аккаунт</p>
+                <p class="subtitle" id="subtitle">Войдите в свой аккаунт</p>
             </div>
 
-            <!-- FORM -->
-            <form class="form" onsubmit="handleSubmit(event)">
-                
-                <!-- LOGIN INPUT -->
+            <form class="form" onsubmit="handleSubmit(event)" novalidate>
                 <div class="form-group">
                     <div class="input-wrapper">
-                        <span class="input-icon">👤</span>
+                        <span class="input-icon" aria-hidden="true">👤</span>
                         <input
                             type="text"
                             id="login"
                             class="input"
                             placeholder="Логин"
                             autocomplete="username"
+                            minlength="4"
+                            maxlength="32"
+                            pattern="[a-zA-Z0-9_-]+"
+                            required
+                            aria-label="Логин"
+                            aria-describedby="login-hint"
                         >
                     </div>
-                    <div class="input-hint" id="login-hint"></div>
+                    <div class="input-hint" id="login-hint" aria-live="polite"></div>
                 </div>
 
-                <!-- PASSWORD INPUT -->
                 <div class="form-group">
                     <div class="input-wrapper">
-                        <span class="input-icon">🔑</span>
+                        <span class="input-icon" aria-hidden="true">🔑</span>
                         <input
                             type="password"
                             id="password"
                             class="input"
                             placeholder="Пароль"
                             autocomplete="current-password"
+                            minlength="6"
+                            maxlength="128"
+                            required
+                            aria-label="Пароль"
+                            aria-describedby="password-hint"
                         >
                     </div>
-                    <div class="input-hint" id="password-hint"></div>
+                    <div class="input-hint" id="password-hint" aria-live="polite"></div>
                 </div>
 
-                <!-- FORGOT PASSWORD -->
                 <div class="forgot-section">
-                    <a class="forgot-link" onclick="showForgotModal()">Забыли пароль?</a>
+                    <button type="button" class="forgot-link" onclick="showForgotModal()">Забыли пароль?</button>
                 </div>
 
-                <!-- VALIDATION -->
-                <div class="validation-container">
+                <div class="validation-container" aria-live="polite">
                     <div class="validation-header">
                         <span class="validation-title">✓ Проверка данных</span>
                         <span class="validation-score" id="score">0%</span>
                     </div>
-                    <div class="progress-bar-container">
+                    <div class="progress-bar-container" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="score">
                         <div class="progress-bar-fill" id="progress"></div>
                     </div>
                     <div class="validation-checks">
                         <div class="check-item" id="check-login">
                             <div class="check-icon">✓</div>
-                            <span>Логин минимум 4 символа</span>
+                            <span>Логин минимум 4 символа и только латиница/цифры</span>
                         </div>
                         <div class="check-item" id="check-password">
                             <div class="check-icon">✓</div>
@@ -78,25 +96,20 @@
                     </div>
                 </div>
 
-                <!-- SUBMIT -->
                 <button type="submit" class="button" id="btn" disabled>
                     <span class="spinner"></span>
-                    <span class="button-text">Продолжить</span>
+                    <span class="button-text" id="button-text">Войти</span>
                 </button>
             </form>
 
-            <!-- TOGGLE MODE -->
             <div class="toggle-section">
-                <span class="toggle-text">
-                    Нет аккаунта?
-                    <button type="button" class="toggle-btn" onclick="toggleMode()">Зарегистрироваться</button>
-                </span>
+                <span class="toggle-text" id="toggle-text">Нет аккаунта?</span>
+                <button type="button" class="toggle-btn" id="toggle-btn" onclick="toggleMode()">Зарегистрироваться</button>
             </div>
         </div>
     </div>
 
-    <!-- POPUP NOTIFICATION -->
-    <div class="popup" id="popup">
+    <div class="popup" id="popup" role="status" aria-live="polite">
         <div class="popup-content">
             <span class="popup-icon" id="popup-icon"></span>
             <span id="popup-text"></span>
@@ -104,17 +117,25 @@
     </div>
 
     <script>
-        // ===== STATE =====
         let mode = 'login';
         let isLoading = false;
 
         const loginInput = document.getElementById('login');
         const passwordInput = document.getElementById('password');
         const button = document.getElementById('btn');
-        const form = document.querySelector('.form');
         const titleEl = document.getElementById('title');
+        const subtitleEl = document.getElementById('subtitle');
+        const buttonTextEl = document.getElementById('button-text');
+        const toggleTextEl = document.getElementById('toggle-text');
+        const toggleBtnEl = document.getElementById('toggle-btn');
+        const loginHintEl = document.getElementById('login-hint');
+        const passwordHintEl = document.getElementById('password-hint');
+        const loginCheckEl = document.getElementById('check-login');
+        const passwordCheckEl = document.getElementById('check-password');
+        const progressEl = document.getElementById('progress');
+        const scoreEl = document.getElementById('score');
+        const progressContainerEl = document.querySelector('.progress-bar-container');
 
-        // ===== VALIDATION =====
         function validateLogin(value) {
             return value.length >= 4 && /^[a-zA-Z0-9_-]+$/.test(value);
         }
@@ -130,45 +151,40 @@
             const loginValid = validateLogin(login);
             const passwordValid = validatePassword(password);
 
-            // Update input states
             loginInput.classList.toggle('valid', loginValid);
             loginInput.classList.toggle('invalid', login.length > 0 && !loginValid);
 
             passwordInput.classList.toggle('valid', passwordValid);
             passwordInput.classList.toggle('invalid', password.length > 0 && !passwordValid);
 
-            // Update hints
-            document.getElementById('login-hint').textContent = 
+            loginHintEl.textContent =
                 loginValid ? '✓ Логин подходит' :
-                login.length > 0 ? `✗ Еще ${4 - login.length} символов` :
+                login.length > 0 ? `✗ Еще ${Math.max(0, 4 - login.length)} символов` :
                 '';
 
-            document.getElementById('password-hint').textContent = 
+            passwordHintEl.textContent =
                 passwordValid ? '✓ Пароль подходит' :
-                password.length > 0 ? `✗ Еще ${6 - password.length} символов` :
+                password.length > 0 ? `✗ Еще ${Math.max(0, 6 - password.length)} символов` :
                 '';
 
-            // Update checks
-            document.getElementById('check-login').classList.toggle('passed', loginValid);
-            document.getElementById('check-password').classList.toggle('passed', passwordValid);
+            loginCheckEl.classList.toggle('passed', loginValid);
+            passwordCheckEl.classList.toggle('passed', passwordValid);
 
-            // Update progress
             let score = 0;
             if (loginValid) score += 50;
             if (passwordValid) score += 50;
 
-            document.getElementById('progress').style.width = score + '%';
-            document.getElementById('score').textContent = score + '%';
+            progressEl.style.width = score + '%';
+            scoreEl.textContent = score + '%';
+            progressContainerEl.setAttribute('aria-valuenow', String(score));
 
-            // Enable/disable button
-            button.disabled = score < 100;
-            button.style.opacity = score < 100 ? '0.5' : '1';
+            button.disabled = score < 100 || isLoading;
+            button.style.opacity = button.disabled ? '0.5' : '1';
         }
 
         loginInput.addEventListener('input', updateValidation);
         passwordInput.addEventListener('input', updateValidation);
 
-        // ===== POPUP =====
         function showPopup(message, type = 'info') {
             const popup = document.getElementById('popup');
             const icon = document.getElementById('popup-icon');
@@ -178,7 +194,7 @@
             popup.classList.remove('success', 'error', 'info');
             popup.classList.add(type);
 
-            icon.textContent = 
+            icon.textContent =
                 type === 'success' ? '✓' :
                 type === 'error' ? '✕' :
                 'ℹ';
@@ -187,14 +203,31 @@
             setTimeout(() => popup.classList.remove('show'), 3000);
         }
 
-        // ===== SUBMIT =====
+        async function readResponseData(response) {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                try {
+                    return await response.json();
+                } catch {
+                    return {};
+                }
+            }
+            return {};
+        }
+
         async function handleSubmit(e) {
             e.preventDefault();
 
-            if (isLoading || button.disabled) return;
+            if (isLoading) return;
+            if (button.disabled) {
+                showPopup('✗ Проверьте логин и пароль', 'error');
+                return;
+            }
 
             isLoading = true;
             button.classList.add('loading');
+            button.setAttribute('aria-busy', 'true');
+            updateValidation();
 
             try {
                 const login = loginInput.value.trim();
@@ -207,75 +240,81 @@
                     body: JSON.stringify({ login, password })
                 });
 
-                const data = await response.json();
+                const data = await readResponseData(response);
+
+                if (!response.ok) {
+                    if (mode === 'login' && response.status === 401) {
+                        showPopup('✗ Неверный логин или пароль', 'error');
+                    } else if (mode === 'register' && response.status === 409) {
+                        showPopup('✗ Логин уже занят', 'error');
+                    } else {
+                        showPopup('✗ Ошибка сервера', 'error');
+                    }
+                    return;
+                }
 
                 if (mode === 'register') {
                     if (data.status === 'ok') {
                         showPopup('✓ Аккаунт создан! Переход...', 'success');
-                        setTimeout(() => window.location.href = '/', 1500);
+                        setTimeout(() => {
+                            window.location.href = data.redirect || '/';
+                        }, 1500);
                     } else if (data.status === 'exists') {
                         showPopup('✗ Логин уже занят', 'error');
                     } else {
-                        showPopup(`✗ ${data.message || 'Ошибка регистрации'}`, 'error');
+                        showPopup('✗ Ошибка регистрации', 'error');
                     }
+                } else if (data.status === 'ok') {
+                    showPopup('✓ Вход успешен! Переход...', 'success');
+                    setTimeout(() => {
+                        window.location.href = data.redirect || '/';
+                    }, 1500);
                 } else {
-                    if (data.status === 'ok') {
-                        showPopup('✓ Вход успешен! Переход...', 'success');
-                        setTimeout(() => window.location.href = data.redirect || '/', 1500);
-                    } else {
-                        showPopup('✗ Неверный логин или пароль', 'error');
-                    }
+                    showPopup('✗ Неверный логин или пароль', 'error');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showPopup('✗ Ошибка сервера. Попробуй позже.', 'error');
+                console.error('Auth request error:', error);
+                showPopup('✗ Сервер недоступен. Запустите backend/app.py', 'error');
             } finally {
                 isLoading = false;
                 button.classList.remove('loading');
+                button.removeAttribute('aria-busy');
+                updateValidation();
             }
         }
 
-        // ===== TOGGLE MODE =====
         function toggleMode() {
             mode = mode === 'login' ? 'register' : 'login';
-            
-            titleEl.textContent = mode === 'register' ? 'Регистрация' : 'Вход';
-            document.querySelector('.subtitle').textContent = 
-                mode === 'register' 
-                    ? 'Создайте аккаунт' 
-                    : 'Войдите в свой аккаунт';
-            
-            document.querySelector('.toggle-text').innerHTML = 
-                mode === 'register'
-                    ? 'Уже есть аккаунт? <button type="button" class="toggle-btn" onclick="toggleMode()">Войти</button>'
-                    : 'Нет аккаунта? <button type="button" class="toggle-btn" onclick="toggleMode()">Зарегистрироваться</button>';
-            
-            document.querySelector('.button-text').textContent = 
-                mode === 'register' ? 'Зарегистрироваться' : 'Войти';
 
-            // Clear form
+            const isRegisterMode = mode === 'register';
+
+            titleEl.textContent = isRegisterMode ? 'Регистрация' : 'Вход';
+            subtitleEl.textContent = isRegisterMode ? 'Создайте аккаунт' : 'Войдите в свой аккаунт';
+            toggleTextEl.textContent = isRegisterMode ? 'Уже есть аккаунт?' : 'Нет аккаунта?';
+            toggleBtnEl.textContent = isRegisterMode ? 'Войти' : 'Зарегистрироваться';
+            buttonTextEl.textContent = isRegisterMode ? 'Зарегистрироваться' : 'Войти';
+            passwordInput.autocomplete = isRegisterMode ? 'new-password' : 'current-password';
+
             loginInput.value = '';
             passwordInput.value = '';
             loginInput.classList.remove('valid', 'invalid');
             passwordInput.classList.remove('valid', 'invalid');
-            document.getElementById('login-hint').textContent = '';
-            document.getElementById('password-hint').textContent = '';
+            loginHintEl.textContent = '';
+            passwordHintEl.textContent = '';
 
             updateValidation();
         }
 
-        // ===== FORGOT PASSWORD =====
         function showForgotModal() {
             const login = loginInput.value.trim();
             if (!login) {
-                showPopup('✗ Введи логин', 'error');
+                showPopup('✗ Введите логин', 'error');
                 return;
             }
 
-            showPopup('✓ Пароль отправлен на почту (если указана)', 'info');
+            showPopup('ℹ Восстановление пароля пока в разработке', 'info');
         }
 
-        // ===== INIT =====
         updateValidation();
     </script>
 

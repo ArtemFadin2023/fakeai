@@ -1,3 +1,4 @@
+﻿# -*- coding: utf-8 -*-
 from factcheck import build_chat, build_smart, build_news
 from flask import Flask, request, jsonify, render_template, session, redirect
 import sqlite3
@@ -93,6 +94,24 @@ def init_db():
 
 init_db()
 
+def fix_db_encoding():
+    """Fix broken Cyrillic encoding stored in DB (mojibake)"""
+    FIXES = {
+        "РќРёРєРѕРіРґР°": "Никогда",
+        "Р'РµСЃСЃСЂРѕС‡РЅРѕ": "Бессрочно",
+    }
+    try:
+        db = get_db()
+        for broken, fixed in FIXES.items():
+            db.execute("UPDATE users SET last_login=? WHERE last_login=?", (fixed, broken))
+            db.execute("UPDATE users SET sub_until=? WHERE sub_until=?", (fixed, broken))
+        db.commit()
+        db.close()
+    except Exception as e:
+        print(f"fix_db_encoding error: {e}")
+
+fix_db_encoding()
+
 # =========================
 # SUBSCRIPTION
 # =========================
@@ -130,7 +149,7 @@ def inc_messages(login):
 
 @app.route("/admin/users")
 def admin_users():
-    if not session.get("admin"): return jsonify({"error":"no access"}), 403
+    if not session.get("admin"): return jsonify({"error":"нет доступа"}), 403
     db = get_db()
     rows = db.execute("SELECT login,email,created,last_login,sub_until,sub_type,message_count FROM users ORDER BY created DESC").fetchall()
     db.close()
@@ -144,7 +163,7 @@ def admin_users():
 
 @app.route("/admin/set_sub", methods=["POST"])
 def admin_set_sub():
-    if not session.get("admin"): return jsonify({"error":"no access"}), 403
+    if not session.get("admin"): return jsonify({"error":"нет доступа"}), 403
     data = request.get_json() or {}
     login, months = data.get("login"), data.get("months")
     if not login: return jsonify({"status":"error"}), 400
@@ -161,7 +180,7 @@ def admin_set_sub():
 
 @app.route("/admin/change_password", methods=["POST"])
 def admin_change_pw():
-    if not session.get("admin"): return jsonify({"error":"no access"}), 403
+    if not session.get("admin"): return jsonify({"error":"нет доступа"}), 403
     data = request.get_json() or {}
     login, pw = data.get("login"), data.get("password")
     if not login or not pw: return jsonify({"status":"error"}), 400
@@ -172,7 +191,7 @@ def admin_change_pw():
 
 @app.route("/admin/delete_user", methods=["POST"])
 def admin_delete_user():
-    if not session.get("admin"): return jsonify({"error":"no access"}), 403
+    if not session.get("admin"): return jsonify({"error":"нет доступа"}), 403
     login = (request.get_json() or {}).get("login")
     if not login: return jsonify({"status":"error"}), 400
     db = get_db()
@@ -184,7 +203,7 @@ def admin_delete_user():
 
 @app.route("/admin/generate_key", methods=["POST"])
 def admin_generate_key():
-    if not session.get("admin"): return jsonify({"error":"no access"}), 403
+    if not session.get("admin"): return jsonify({"error":"нет доступа"}), 403
     months = (request.get_json() or {}).get("months", 1)
     key = generate_key()
     db = get_db()
@@ -195,7 +214,7 @@ def admin_generate_key():
 
 @app.route("/admin/keys")
 def admin_keys():
-    if not session.get("admin"): return jsonify({"error":"no access"}), 403
+    if not session.get("admin"): return jsonify({"error":"нет доступа"}), 403
     db = get_db()
     rows = db.execute("SELECT key,months,created,used_by,used_at FROM activation_keys ORDER BY created DESC").fetchall()
     db.close()
@@ -205,25 +224,27 @@ def admin_keys():
 def activate_key():
     user = session.get("user")
     if not user: return jsonify({"status":"error"}), 401
-    key = (request.get_json() or {}).get("key","").strip()
-    
-    # 🔒 ИСПРАВЛЕНИЕ: Валидация - только буквы, цифры и дефисы
-    if not re.match(r'^[A-Z0-9\-]+$', key.upper()): 
-        return jsonify({"status":"error","message":"Неверный формат ключа"}), 400
-    if not key: 
+
+    key = (request.get_json() or {}).get("key", "").strip().upper()
+    if not key:
         return jsonify({"status":"error","message":"Введите ключ"}), 400
-    
+    if not re.match(r"^[A-Z0-9\-]+$", key):
+        return jsonify({"status":"error","message":"Неверный формат ключа"}), 400
+
     db = get_db()
-    row = db.execute("SELECT months,used_by FROM activation_keys WHERE UPPER(key)=UPPER(?)", (key,)).fetchone()
-    if not row: 
+    row = db.execute("SELECT months,used_by FROM activation_keys WHERE UPPER(key)=?", (key,)).fetchone()
+    if not row:
         db.close()
         return jsonify({"status":"error","message":"Ключ не найден"}), 404
-    
+
     months, used_by = row
-    if used_by: 
+    if used_by:
+        if str(used_by).lower() == str(user).lower():
+            db.close()
+            return jsonify({"status":"ok","message":"Ключ уже активирован на этом аккаунте"})
         db.close()
-        return jsonify({"status":"error","message":"Ключ уже использован"}), 409
-    
+        return jsonify({"status":"error","message":"Ключ уже использован другим аккаунтом"}), 409
+
     if months == 0:
         db.execute("UPDATE users SET sub_until=NULL,sub_type='lifetime' WHERE login=?", (user,))
     else:
@@ -236,8 +257,8 @@ def activate_key():
             except: pass
         until = (base+timedelta(days=30*months)).strftime("%Y-%m-%d")
         db.execute("UPDATE users SET sub_until=?,sub_type=? WHERE login=?", (until,f"{months}m",user))
-    
-    db.execute("UPDATE activation_keys SET used_by=?,used_at=? WHERE key=?",
+
+    db.execute("UPDATE activation_keys SET used_by=?,used_at=? WHERE UPPER(key)=?",
                (user,datetime.now().strftime("%Y-%m-%d %H:%M"),key))
     db.commit(); db.close()
     return jsonify({"status":"ok"})
@@ -284,12 +305,18 @@ def register():
     if not login or not password: return jsonify({"status":"error","message":"Заполните все поля"}), 400
     if not is_valid_login(login): return jsonify({"status":"error","message":"Логин: 4-30 символов (буквы, цифры, -, _)"}), 400
     if not is_valid_password(password): return jsonify({"status":"error","message":"Пароль минимум 6 символов"}), 400
+    email = data.get("email","").strip().lower() or None
     db = get_db()
     if db.execute("SELECT id FROM users WHERE login=?", (login,)).fetchone():
         db.close(); return jsonify({"status":"exists","message":"Логин уже занят"}), 409
+    if email:
+        if not is_valid_email(email):
+            db.close(); return jsonify({"status":"error","message":"Неверный формат email"}), 400
+        if db.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone():
+            db.close(); return jsonify({"status":"error","message":"Email уже используется"}), 409
     try:
         db.execute("INSERT INTO users(login,password,email,created,last_login,message_count) VALUES(?,?,?,?,?,0)",
-                   (login,hash_password(password),None,datetime.now().strftime("%d.%m.%Y %H:%M"),None))
+                   (login,hash_password(password),email,datetime.now().strftime("%d.%m.%Y %H:%M"),None))
         db.commit(); db.close(); session["user"] = login
         return jsonify({"status":"ok","redirect":"/"})
     except Exception as e:
@@ -404,8 +431,9 @@ def new_chat():
     user = session.get("user")
     if not user: return jsonify({"status":"error"}), 401
     name = f"chat_{int(time.time())}.json"
-    save_json(os.path.join(get_user_dir(user), name), {"title":None,"messages":[]})
-    return jsonify({"status":"ok","chat":name})
+    date_title = datetime.now().strftime("%d.%m.%y")
+    save_json(os.path.join(get_user_dir(user), name), {"title":date_title,"messages":[]})
+    return jsonify({"status":"ok","chat":name,"title":date_title})
 
 @app.route("/history/<chat>")
 def history_chat(chat):
@@ -467,7 +495,6 @@ def ai():
     else:
         chat_title = None; history = raw or []
 
-    # ✅ КОНТЕКСТ СОХРАНЁН
     context = "".join(f"User: {m.get('user','')}\nAI: {m.get('bot','')}\n" for m in history[-30:])
     full_prompt = context + f"User: {text}"
 
